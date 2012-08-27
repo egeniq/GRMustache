@@ -17,11 +17,11 @@ How To
 - For MacOS development, add `include/GRMustache.h` and `lib/libGRMustache4-MacOS.a` to your project.
 - For iOS development, add `include/GRMustache.h` and `lib/libGRMustache4-iOS.a` to your project.
 
-GRMustache can target MacOS down to 10.6 Snow Leopard, and iOS down to version 3. However, APIs based on Objective-C blocks and NSURL are only available from iOS4.
+Alternatively, you may use [CocoaPods](https://github.com/CocoaPods/CocoaPods): append `pod 'GRMustache', '~> 4.3'` to your Podfile.
 
-Alternatively, you may use [CocoaPods](https://github.com/CocoaPods/CocoaPods): append `dependency 'GRMustache'` to your Podfile. In its current version, CocoaPods exposes private headers that you should not rely on, because future versions of GRMustache may change them, without notice, in an incompatible fashion. Make sure you only import `GRMustache.h`.
+GRMustache targets MacOS down to 10.6 Snow Leopard, iOS down to version 3, and only depends on the Foundation framework.
 
-### 2. Import "GRMustache.h" and start rendering templates
+### 2. Start rendering templates
 
 ```objc
 #import "GRMustache.h"
@@ -31,9 +31,9 @@ NSString *rendering = [GRMustacheTemplate renderObject:[Person personWithName:@"
                                             fromString:@"Hello {{name}}!"
                                                  error:NULL];
 
-// Renders from a resource
+// Renders a document from the `Profile.mustache` resource
 NSString *rendering = [GRMustacheTemplate renderObject:[Person personWithName:@"Arthur"]
-                                          fromResource:@"Profile"  // loads `Profile.mustache`
+                                          fromResource:@"Profile"
                                                 bundle:nil
                                                  error:NULL];
 ```
@@ -42,25 +42,7 @@ NSString *rendering = [GRMustacheTemplate renderObject:[Person personWithName:@"
 Documentation
 -------------
 
-### Mustache syntax
-
-- http://mustache.github.com/mustache.5.html
-
-### Guides
-
-- [Guides/templates.md](GRMustache/blob/master/Guides/templates.md): how to load, parse, and render templates from various sources.
-- [Guides/runtime.md](GRMustache/blob/master/Guides/runtime.md): how to provide data to templates.
-- [Guides/helpers.md](GRMustache/blob/master/Guides/helpers.md): how to process the template canvas before it is rendered with Mustache "lambda sections".
-- [Guides/filters.md](GRMustache/blob/master/Guides/filters.md): how to process data before it is rendered with "filters".
-- [Guides/delegate.md](GRMustache/blob/master/Guides/delegate.md): how to hook into template rendering.
-
-### Sample code
-
-- [Guides/sample_code](GRMustache/tree/master/Guides/sample_code): because some tasks are easier to do with some guidelines.
-
-### Reference
-
-- [Reference](http://groue.github.com/GRMustache/Reference/): the GRMustache reference, automatically generated from inline documentation, for fun and profit, by [appledoc](http://gentlebytes.com/appledoc/).
+Documentation starts here: [Guides/introduction.md](GRMustache/blob/master/Guides/introduction.md).
 
 
 FAQ
@@ -70,21 +52,21 @@ FAQ
     
     A: Check [Guides/sample_code/indexes.md](GRMustache/blob/master/Guides/sample_code/indexes.md)
 
-- **Q: How do I format numbers and dates, or localize portions of templates, etc?**
+- **Q: How do I format numbers and dates?**
     
-    A: [Filters](GRMustache/blob/master/Guides/filters.md) and [Mustache lambda sections](GRMustache/blob/master/Guides/helpers.md) are your friends. *Filters* act on the data you provide to the template, and are typically a good match for formatting values. *Lambda sections* act directly on the template canvas, and can help you process a full portion of a template.
+    A: Check [Guides/sample_code/number_formatting.md](GRMustache/blob/master/Guides/sample_code/number_formatting.md)
+
+- **Q: How do I localize templates?**
+
+    A: Check [Guides/sample_code/localization.md](GRMustache/blob/master/Guides/sample_code/localization.md)
+
+- **Q: How do I render default values for missing keys?**
+
+    A: Check [Guides/delegate.md](GRMustache/blob/master/Guides/delegate.md).
 
 - **Q: Does GRMustache provide any layout facility?**
     
     A: No. But there is a [sample Xcode project](GRMustache/tree/master/Guides/sample_code/layout) that demonstrates how to do that.
-
-- **Q: How do I render default values for missing keys?**
-
-    A: This can be done by providing your template a delegate: check [Guides/delegate.md](GRMustache/blob/master/Guides/delegate.md).
-
-- **Q: I have a bunch of templates and partials that live in memory / a database / the cloud / wherever.**
-    
-    A: Check [Guides/template_repositories.md](GRMustache/blob/master/Guides/template_repositories.md).
 
 - **Q: What is this NSUndefinedKeyException stuff?**
 
@@ -92,7 +74,7 @@ FAQ
 
 - **Q: Why does GRMustache need JRSwizzle?**
 
-    A: GRMustache will [swizzle](http://www.mikeash.com/pyblog/friday-qa-2010-01-29-method-replacement-for-fun-and-profit.html) the implementation of `valueForUndefinedKey:` in the NSObject and NSManagedObject classes when you invoke `[GRMustache preventNSUndefinedKeyExceptionAttack]`. This use case is covered in [Guides/runtime/context_stack.md](GRMustache/blob/master/Guides/runtime/context_stack.md). The dreadful swizzling happens in [src/classes/GRMustacheNSUndefinedKeyExceptionGuard.m](GRMustache/blob/master/src/classes/GRMustacheNSUndefinedKeyExceptionGuard.m).
+    A: GRMustache does not need it. However, *you* may happy having GRMustache [swizzle](http://www.mikeash.com/pyblog/friday-qa-2010-01-29-method-replacement-for-fun-and-profit.html) `valueForUndefinedKey:` in the NSObject and NSManagedObject classes when you invoke `[GRMustache preventNSUndefinedKeyExceptionAttack]`. The use case is described in [Guides/runtime/context_stack.md](GRMustache/blob/master/Guides/runtime/context_stack.md).
 
 
 Contribution wish-list
@@ -110,13 +92,4 @@ Please fork. You'll learn useful information in [Guides/forking.md](GRMustache/b
 License
 -------
 
-Released under the [MIT License](http://en.wikipedia.org/wiki/MIT_License)
-
-Copyright (c) 2012 Gwendal Roué
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
+Released under the [MIT License](GRMustache/blob/master/LICENSE).
