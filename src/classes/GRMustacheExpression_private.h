@@ -52,7 +52,7 @@
  * @see [GRMustacheInvocation description]
  * @see [GRMustacheToken description]
  */
-@property (nonatomic, retain) GRMustacheToken *debuggingToken;
+//@property (nonatomic, retain) GRMustacheToken *debuggingToken;
 
 /**
  * This method performs three jobs in the same time:

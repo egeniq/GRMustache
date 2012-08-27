@@ -30,7 +30,7 @@
  */
 @interface GRMustacheIdentifierExpression : NSObject<GRMustacheExpression> {
 @private
-    GRMustacheToken *_debuggingToken;
+    // GRMustacheToken *_debuggingToken;
     NSString *_identifier;
 }
 

@@ -25,7 +25,7 @@
 #import "GRMustacheInvocation_private.h"
 
 @implementation GRMustacheImplicitIteratorExpression
-@synthesize debuggingToken=_debuggingToken;
+//@synthesize debuggingToken=_debuggingToken;
 
 + (id)expression
 {
@@ -34,7 +34,7 @@
 
 - (void)dealloc
 {
-    [_debuggingToken release];
+    // [_debuggingToken release];
     [super dealloc];
 }
 
@@ -51,7 +51,7 @@
     if (delegates.count > 0) {
         NSAssert(ioInvocation, @"WTF");
         *ioInvocation = [[[GRMustacheInvocation alloc] init] autorelease];
-        (*ioInvocation).debuggingToken = _debuggingToken;
+        //  (*ioInvocation).debuggingToken = _debuggingToken;
         (*ioInvocation).returnValue = context.object;
         (*ioInvocation).key = @".";
     }

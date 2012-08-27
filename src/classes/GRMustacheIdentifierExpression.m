@@ -31,7 +31,7 @@
 @end
 
 @implementation GRMustacheIdentifierExpression
-@synthesize debuggingToken=_debuggingToken;
+//@synthesize debuggingToken=_debuggingToken;
 @synthesize identifier=_identifier;
 
 + (id)expressionWithIdentifier:(NSString *)identifier
@@ -50,7 +50,7 @@
 
 - (void)dealloc
 {
-    [_debuggingToken release];
+    //   [_debuggingToken release];
     [_identifier release];
     [super dealloc];
 }
@@ -73,7 +73,7 @@
     if (delegates.count > 0) {
         NSAssert(ioInvocation, @"WTF");
         *ioInvocation = [[[GRMustacheInvocation alloc] init] autorelease];
-        (*ioInvocation).debuggingToken = _debuggingToken;
+        //(*ioInvocation).debuggingToken = _debuggingToken;
         (*ioInvocation).returnValue = value;
         (*ioInvocation).key = _identifier;
     }

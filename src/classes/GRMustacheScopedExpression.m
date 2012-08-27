@@ -32,7 +32,7 @@
 @end
 
 @implementation GRMustacheScopedExpression
-@synthesize debuggingToken=_debuggingToken;
+//@synthesize debuggingToken=_debuggingToken;
 @synthesize baseExpression=_baseExpression;
 @synthesize scopeIdentifier=_scopeIdentifier;
 
@@ -53,20 +53,20 @@
 
 - (void)dealloc
 {
-    [_debuggingToken release];
+    //   [_debuggingToken release];
     [_baseExpression release];
     [_scopeIdentifier release];
     [super dealloc];
 }
 
-- (void)setDebuggingToken:(GRMustacheToken *)debuggingToken
-{
-    if (_debuggingToken != debuggingToken) {
-        [_debuggingToken release];
-        _debuggingToken = [debuggingToken retain];
-        _baseExpression.debuggingToken = _debuggingToken;
-    }
-}
+//- (void)setDebuggingToken:(GRMustacheToken *)debuggingToken
+//{
+//    if (_debuggingToken != debuggingToken) {
+//        [_debuggingToken release];
+//        _debuggingToken = [debuggingToken retain];
+//        _baseExpression.debuggingToken = _debuggingToken;
+//    }
+//}
 
 - (BOOL)isEqual:(id<GRMustacheExpression>)expression
 {
@@ -92,7 +92,7 @@
             NSAssert(ioInvocation, @"WTF");
             if (*ioInvocation == nil) { // it is nil if we are scoping the result of a filter: f(x).y
                 *ioInvocation = [[[GRMustacheInvocation alloc] init] autorelease];
-                (*ioInvocation).debuggingToken = _debuggingToken;
+                //               (*ioInvocation).debuggingToken = _debuggingToken;
             }
             (*ioInvocation).returnValue = returnValue;
             (*ioInvocation).key = _scopeIdentifier;

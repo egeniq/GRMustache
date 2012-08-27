@@ -243,7 +243,7 @@
                                             templateID:templateID
                                                   line:line
                                                  range:tokenRange];
-                expression.debuggingToken = token;
+                // expression.debuggingToken = token;
             } break;
                 
             case GRMustacheTokenTypeSectionOpening:
@@ -261,7 +261,7 @@
                                             templateID:templateID
                                                   line:line
                                                  range:tokenRange];
-                expression.debuggingToken = token;
+                //expression.debuggingToken = token;
             } break;
                 
             case GRMustacheTokenTypePartial: {
