@@ -20,9 +20,29 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#define GRMUSTACHE_VERSION_MAX_ALLOWED GRMUSTACHE_VERSION_4_0
-#import "GRMustachePublicAPITest.h"
+#import "GRMustacheExpression_private.h"
 
-@interface GRMustacheTemplateRepositoryWithDirectoryTest : GRMustachePublicAPITest
+/**
+ * The GRMustacheIdentifierExpression is able to perform the deep lookup of an
+ * identifier in a context stack.
+ *
+ * @see GRMustacheExpression
+ */
+@interface GRMustacheIdentifierExpression : NSObject<GRMustacheExpression> {
+@private
+    // GRMustacheToken *_debuggingToken;
+    NSString *_identifier;
+}
 
+/**
+ * Returns an identifier expression, given an identifier.
+ *
+ * For instance, the Mustache tag `{{ name }}` contains an identifier
+ * expression, whose identifier is `name`.
+ *
+ * @param identifier  An identifier
+ *
+ * @return A GRMustacheIdentifierExpression.
+ */
++ (id)expressionWithIdentifier:(NSString *)identifier;
 @end

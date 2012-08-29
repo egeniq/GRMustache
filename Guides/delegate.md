@@ -1,9 +1,20 @@
-[up](../../../../GRMustache), [next](sample_code/README.md)
+[up](../../../../GRMustache), [next](../../../tree/master/Guides/sample_code)
 
 GRMustacheTemplateDelegate protocol
 ===================================
 
 This protocol lets you observe, and possibly alter the rendering of a template.
+
+
+Template delegate and section delegates
+---------------------------------------
+
+While rendering a template, several objects may get messages from GRMustache:
+
+- The template's delegate itself, which you set via the `delegate` property of the GRMustacheTemplate class.
+- Objects attached to sections, as long as they conform to the GRMustacheTemplateDelegate protocol.
+
+The template's delegate can observe the full template rendering. However, sections delegates can only observe the rendering of their inner content. As sections get nested, a template gets more and more delegates.
 
 
 Observe the template rendering
@@ -17,6 +28,8 @@ The following methods are called before, and after the whole template rendering:
 - (void)templateWillRender:(GRMustacheTemplate *)template;
 - (void)templateDidRender:(GRMustacheTemplate *)template;
 ```
+
+Section delegates are not sent these messages. Only template delegates are.
 
 ### Tag rendering
 
@@ -47,6 +60,7 @@ The *interpretation* parameter tells you how the return value of the invocation 
 typedef enum {
     GRMustacheInterpretationSection,
     GRMustacheInterpretationVariable,
+    GRMustacheInterpretationFilterArgument,
 } GRMustacheInterpretation;
 ```
 
@@ -54,12 +68,12 @@ typedef enum {
 
 `GRMustacheInterpretationSection` tells you that the return value is used by a Mustache section such as `{{#name}}...{{/name}}`. Mustache sections are versatile: there are boolean sections, loop sections, and lambda sections, and this depends solely on the rendered value, that is to say: the return value of the invocation. Again, see [Guides/runtime.md](runtime.md) for more information.
 
-You will find an actual use of this *interpretation* parameter in the [number formatting sample code](sample_code/number_formatting.md).
+`GRMustacheInterpretationFilterArgument` tells you that the return value is about to be processed by a filter such as `{{ f(name) }}`. See [Guides/filters.md](filters.md) for more information.
 
 
 ### A practical use: debugging templates
 
-You may, for instance, locate keys that could not find any data:
+You may, for instance, give your templates a delegate that locate missing keys:
 
 ```objc
 - (void)template:(GRMustacheTemplate *)template willInterpretReturnValueOfInvocation:(GRMustacheInvocation *)invocation as:(GRMustacheInterpretation)interpretation
@@ -95,9 +109,18 @@ The `returnValue` property of the *invocation* parameter can be written. If you 
 {
     // When returnValue is nil, GRMustache could not find any value to render.
     if (invocation.returnValue == nil) {
-        invocation.returnValue = @"[DEFAULT]";
+        invocation.returnValue = @"DEFAULT";
     }
 }
 ```
 
-[up](../../../../GRMustache), [next](sample_code/README.md)
+### Relationship with filters and helpers
+
+Usually, [filters](filters.md) and [helpers](helpers.md) should do the trick when you want to alter a template's rendering.
+
+However, they both require to be explicited invoked from the template: `{{#helper}}...{{/helper}}`, and `{{ filter(...) }}`.
+
+GRMustacheTemplateDelegate will help you when you can not, or do not want, to embed your extra behaviors right into the template.
+
+
+[up](../../../../GRMustache), [next](../../../tree/master/Guides/sample_code)

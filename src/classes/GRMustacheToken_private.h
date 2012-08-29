@@ -23,6 +23,7 @@
 #import <Foundation/Foundation.h>
 #import "GRMustacheAvailabilityMacros_private.h"
 
+@protocol GRMustacheExpression;
 
 /**
  * The kinds of tokens
@@ -77,7 +78,25 @@ typedef enum {
      * The kind of tokens representing delimiters tags such as `{{=< >=}}`.
      */
     GRMustacheTokenTypeSetDelimiter,
+    
+    /**
+     * The kind of tokens representing pragma tags such as `{{%FILTERS}}`.
+     */
+    GRMustacheTokenTypePragma,
 } GRMustacheTokenType;
+
+/**
+ * The type of a GRMustacheToken's value.
+ *
+ * @see GRMustacheToken.value
+ */
+typedef union {
+    id object;
+    NSString *text;
+    id<GRMustacheExpression> expression;
+    NSString *partialName;
+    NSString *pragma;
+} GRMustacheTokenValue;
 
 /**
  * A GRMustacheToken is the product of GRMustacheParser. It represents a
@@ -93,7 +112,7 @@ typedef enum {
 @interface GRMustacheToken : NSObject {
 @private
     GRMustacheTokenType _type;
-    NSString *_content;
+    GRMustacheTokenValue _value;
     NSString *_templateString;
     id _templateID;
     NSUInteger _line;
@@ -106,15 +125,38 @@ typedef enum {
 @property (nonatomic, readonly) GRMustacheTokenType type GRMUSTACHE_API_INTERNAL;
 
 /**
- * The content of the token depends on its type.
+ * The value of a token depends on its type.
  * 
- * For tokens of type GRMustacheTokenTypeText, the content is the represented
- * text.
- * 
- * For tokens of a tag type, the content is the identifier inside the tag. For
- * instance, it would be "name" for a token representing `{{ name }}`.
+ * For tokens of type GRMustacheTokenTypeText or GRMustacheTokenTypeComment,
+ * the value.text is the text of the represented raw text template portion, or
+ * the comment.
+ *
+ * For instance, a token of type GRMustacheTokenTypeText and text 'Hello '
+ * represents a `Hello ` raw text portion of a template.
+ *
+ * For tokens whose type is
+ * GRMustacheTokenTypeEscapedVariable, GRMustacheTokenTypeUnescapedVariable,
+ * GRMustacheTokenTypeSectionOpening, GRMustacheTokenTypeInvertedSectionOpening,
+ * GRMustacheTokenTypeSectionClosing, value.expression is an expression.
+ *
+ * For instance, a token of type GRMustacheTokenTypeEscapedVariable and
+ * expression 'foo' represents a `{{ foo }}` tag.
+ *
+ * For tokens of type GRMustacheTokenTypePartial, the value.partialName is the
+ * name of a partial template.
+ *
+ * For instance, a token of type GRMustacheTokenTypePartial and partial name
+ * 'profile' represents a `{{> profile }}` tag.
+ *
+ * For tokens of type GRMustacheTokenTypePragma, the value.pragma is the
+ * name of the pragma.
+ *
+ * For instance, a token of type GRMustacheTokenTypePragma and partial name
+ * 'FILTER' represents a `{{% FILTER }}` tag.
+ *
+ * Tokens of type GRMustacheTokenTypeSetDelimiter do not have any value.
  */
-@property (nonatomic, readonly, retain) NSString *content GRMUSTACHE_API_INTERNAL;
+@property (nonatomic, readonly) GRMustacheTokenValue value GRMUSTACHE_API_INTERNAL;
 
 /**
  * The Mustache template string this token comes from.
@@ -145,17 +187,23 @@ typedef enum {
 @property (nonatomic, readonly) NSRange range GRMUSTACHE_API_INTERNAL;
 
 /**
+ * The substring of the template represented by this token.
+ */
+@property (nonatomic, readonly) NSString *templateSubstring GRMUSTACHE_API_INTERNAL;
+
+/**
  * Builds and return a token.
  * 
  * The caller is responsible for honoring the template properties semantics and
- * relationships.
+ * relationships, especially providing for the _value_ parameter a value
+ * suitable for its type.
  * 
  * @see type
- * @see content
+ * @see value
  * @see templateString
  * @see templateID
  * @see line
  * @see range
  */
-+ (id)tokenWithType:(GRMustacheTokenType)type content:(NSString *)content templateString:(NSString *)templateString templateID:(id)templateID line:(NSUInteger)line range:(NSRange)range GRMUSTACHE_API_INTERNAL;
++ (id)tokenWithType:(GRMustacheTokenType)type value:(GRMustacheTokenValue)value templateString:(NSString *)templateString templateID:(id)templateID line:(NSUInteger)line range:(NSRange)range GRMUSTACHE_API_INTERNAL;
 @end

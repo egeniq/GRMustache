@@ -24,177 +24,27 @@
 #import "GRMustacheContext_private.h"
 #import "GRMustacheToken_private.h"
 
-
-// =============================================================================
-#pragma mark - Private concrete class GRMustacheInvocationKey
-
-/**
- * Private subclass of GRMustacheInvocation that deals with single-key
- * invocations, for tags such as `{{name}}`.
- */
-@interface GRMustacheInvocationKey:GRMustacheInvocation {
-@private
-    BOOL _implicitIterator;
-    NSString *_key;
-}
-- (id)initWithToken:(GRMustacheToken *)token key:(NSArray *)keys;
-@end
-
-
-// =============================================================================
-#pragma mark - Private concrete class GRMustacheInvocationKeyPath
-
-/**
- * Private subclass of GRMustacheInvocation that deals with compound keys
- * invocations, for tags such as `{{person.name}}`.
- */
-@interface GRMustacheInvocationKeyPath:GRMustacheInvocation {
-@private
-    BOOL *_actualKey;
-    NSArray *_keys;
-    NSString *_lastUsedKey;
-}
-- (id)initWithToken:(GRMustacheToken *)token keys:(NSArray *)keys;
-@end
-
-
-// =============================================================================
-#pragma mark - GRMustacheInvocation
-
-@interface GRMustacheInvocation()
-- (id)initWithToken:(GRMustacheToken *)token;
-@end
-
 @implementation GRMustacheInvocation
 @synthesize returnValue=_returnValue;
-@dynamic key;
-
-+ (id)invocationWithToken:(GRMustacheToken *)token keys:(NSArray *)keys
-{
-    if (keys.count > 1) {
-        return [[[GRMustacheInvocationKeyPath alloc] initWithToken:token keys:keys] autorelease];
-    } else {
-        return [[[GRMustacheInvocationKey alloc] initWithToken:token key:[keys objectAtIndex:0]] autorelease];
-    }
-}
-
-- (id)initWithToken:(GRMustacheToken *)token
-{
-    self = [self init];
-    if (self) {
-        _token = [token retain];
-    }
-    return self;
-}
+@synthesize key=_key;
+@synthesize debuggingToken=_debuggingToken;
 
 - (void)dealloc
 {
-    [_token release];
     [_returnValue release];
+    [_key release];
+    [_debuggingToken release];
     [super dealloc];
 }
 
 - (NSString *)description
 {
-    if (_token.templateID) {
-        return [NSString stringWithFormat:@"%@ at line %lu of template %@", [_token.templateString substringWithRange:_token.range], (unsigned long)_token.line, _token.templateID];
+    NSAssert(_debuggingToken, @"debuggingToken not set");
+    if (_debuggingToken.templateID) {
+        return [NSString stringWithFormat:@"`%@` at line %lu of template %@", _debuggingToken.templateSubstring, (unsigned long)_debuggingToken.line, _debuggingToken.templateID];
     } else {
-        return [NSString stringWithFormat:@"%@ at line %lu", [_token.templateString substringWithRange:_token.range], (unsigned long)_token.line];
-    }
-}
-
-- (void)invokeWithContext:(GRMustacheContext *)context
-{
-    NSAssert(NO, @"abstract method");
-}
-
-@end
-
-
-// =============================================================================
-#pragma mark - Private concrete class GRMustacheInvocationKey
-
-@implementation GRMustacheInvocationKey
-
-- (void)dealloc
-{
-    [_key release];
-    [super dealloc];
-}
-
-- (id)initWithToken:(GRMustacheToken *)token key:(NSString *)key
-{
-    self = [self initWithToken:token];
-    if (self) {
-        _key = [key retain];
-        _implicitIterator = [key isEqualToString:@"."];
-    }
-    return self;
-}
-
-- (NSString *)key
-{
-    return [[_key retain] autorelease];
-}
-
-- (void)invokeWithContext:(GRMustacheContext *)context
-{
-    if (_implicitIterator) {
-        self.returnValue = context.object;
-    } else {
-        self.returnValue = [context valueForKey:_key scoped:NO];
+        return [NSString stringWithFormat:@"`%@` at line %lu", _debuggingToken.templateSubstring, (unsigned long)_debuggingToken.line];
     }
 }
 
 @end
-
-
-// =============================================================================
-#pragma mark - Private concrete class GRMustacheInvocationKeyPath
-
-@implementation GRMustacheInvocationKeyPath
-
-- (void)dealloc
-{
-    [_keys release];
-    free(_actualKey);
-    [super dealloc];
-}
-
-- (id)initWithToken:(GRMustacheToken *)token keys:(NSArray *)keys
-{
-    self = [self initWithToken:token];
-    if (self) {
-        _keys = [keys retain];
-        BOOL *actualKey = _actualKey = malloc(keys.count*sizeof(BOOL));
-        for (NSString *key in _keys) {
-            *(actualKey++) = ![key isEqualToString:@"."];
-        }
-    }
-    return self;
-}
-
-- (NSString *)key
-{
-    return [[_lastUsedKey retain] autorelease];
-}
-
-- (void)invokeWithContext:(GRMustacheContext *)context
-{
-    BOOL scoped = NO;
-    BOOL *actualKey = _actualKey;
-    for (_lastUsedKey in _keys) {
-        if (*(actualKey++)) {
-            context = [GRMustacheContext contextWithObject:[context valueForKey:_lastUsedKey scoped:scoped]];
-        }
-        if (!context) {
-            self.returnValue = nil;
-            return;
-        }
-        scoped = YES;
-    }
-    self.returnValue = context.object;
-}
-
-@end
-

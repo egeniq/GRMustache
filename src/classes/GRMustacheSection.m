@@ -26,36 +26,60 @@
 #import "GRMustacheTemplate_private.h"
 
 @interface GRMustacheSection()
-@property (nonatomic, retain) GRMustacheSectionElement *sectionElement;
-@property (nonatomic, retain) GRMustacheContext *renderingContext;
-@property (nonatomic, retain) GRMustacheTemplate *rootTemplate;
+- (id)initWithSectionElement:(GRMustacheSectionElement *)sectionElement renderingContext:(GRMustacheContext *)renderingContext filterContext:(GRMustacheContext *)filterContext delegatingTemplate:(GRMustacheTemplate *)delegatingTemplate delegates:(NSArray *)delegates;
 @end
 
 @implementation GRMustacheSection
-@synthesize sectionElement=_sectionElement;
 @synthesize renderingContext=_renderingContext;
-@synthesize rootTemplate=_rootTemplate;
 
-+ (id)sectionWithSectionElement:(GRMustacheSectionElement *)sectionElement renderingContext:(GRMustacheContext *)renderingContext rootTemplate:(GRMustacheTemplate *)rootTemplate
++ (id)sectionWithSectionElement:(GRMustacheSectionElement *)sectionElement renderingContext:(GRMustacheContext *)renderingContext filterContext:(GRMustacheContext *)filterContext delegatingTemplate:(GRMustacheTemplate *)delegatingTemplate delegates:(NSArray *)delegates
 {
-    GRMustacheSection *section = [[GRMustacheSection alloc] init];
-    section.sectionElement = sectionElement;
-    section.renderingContext = renderingContext;
-    section.rootTemplate = rootTemplate;
-    return [section autorelease];
+    return [[[GRMustacheSection alloc] initWithSectionElement:sectionElement renderingContext:renderingContext filterContext:filterContext delegatingTemplate:delegatingTemplate delegates:delegates] autorelease];
 }
 
 - (void)dealloc
 {
-    self.sectionElement = nil;
-    self.renderingContext = nil;
-    self.rootTemplate = nil;
+    [_sectionElement release];
+    [_renderingContext release];
+    [_filterContext release];
+    [_delegatingTemplate release];
+    [_delegates release];
     [super dealloc];
+}
+
+- (id)initWithSectionElement:(GRMustacheSectionElement *)sectionElement renderingContext:(GRMustacheContext *)renderingContext filterContext:(GRMustacheContext *)filterContext delegatingTemplate:(GRMustacheTemplate *)delegatingTemplate delegates:(NSArray *)delegates
+{
+    self = [super init];
+    if (self) {
+        _sectionElement = [sectionElement retain];
+        _renderingContext = [renderingContext retain];
+        _filterContext = [filterContext retain];
+        _delegatingTemplate = [delegatingTemplate retain];
+        _delegates = [delegates retain];
+    }
+    return self;
+}
+
+- (void)setRenderingContext:(GRMustacheContext *)renderingContext
+{
+    if (_renderingContext != renderingContext) {
+        [_renderingContext release];
+        _renderingContext = [renderingContext retain];
+    }
 }
 
 - (NSString *)render
 {
-    return [_sectionElement renderElementsWithContext:_renderingContext inRootTemplate:_rootTemplate];
+    return [_sectionElement renderElementsWithRenderingContext:_renderingContext filterContext:_filterContext delegatingTemplate:_delegatingTemplate delegates:_delegates];
+}
+
+- (NSString *)renderTemplateString:(NSString *)string error:(NSError **)outError
+{
+    GRMustacheTemplate *template = [GRMustacheTemplate templateFromString:string error:outError];
+    if (!template) {
+        return nil;
+    }
+    return [template renderRenderingContext:_renderingContext filterContext:_filterContext delegatingTemplate:_delegatingTemplate delegates:_delegates];
 }
 
 - (NSString *)innerTemplateString

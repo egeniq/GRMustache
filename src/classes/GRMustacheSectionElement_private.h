@@ -23,7 +23,7 @@
 #import "GRMustacheAvailabilityMacros_private.h"
 #import "GRMustacheRenderingElement_private.h"
 
-@class GRMustacheInvocation;
+@protocol GRMustacheExpression;
 @class GRMustacheTemplate;
 @class GRMustacheSection;
 
@@ -35,7 +35,7 @@
  */
 @interface GRMustacheSectionElement: NSObject<GRMustacheRenderingElement> {
 @private
-    GRMustacheInvocation *_invocation;
+    id<GRMustacheExpression>_expression;
     NSString *_templateString;
     NSRange _innerRange;
     BOOL _inverted;
@@ -54,7 +54,7 @@
  * 
  * The rendering of Mustache sections depend on the value they are attached to,
  * whether they are truthy, falsey, enumerable, or helpers. The value is fetched
- * by applying the _invocation_ parameter to a rendering context.
+ * by evaluating the _expression_ parameter against a rendering context.
  * 
  * Boolean values are interpreted in their relation to the _inverted_ parameter.
  * 
@@ -65,8 +65,8 @@
  * The _elems_ array contains the GRMustacheRenderingElement objects that make
  * the section (texts, variables, other sections, etc.)
  * 
- * @param invocation      The invocation that should be applied to a rendering
- *                        context in order to fetch the data to render
+ * @param expression      The expression that would evaluate against a context
+ *                        stack.
  * @param templateString  A Mustache template string
  * @param innerRange      The range of the inner template string of the section
  *                        in _templateString_.
@@ -76,22 +76,24 @@
  *
  * @return A GRMustacheSectionElement
  * 
- * @see GRMustacheInvocation
+ * @see GRMustacheExpression
  * @see GRMustacheContext
  * @see GRMustacheHelper
  */
-+ (id)sectionElementWithInvocation:(GRMustacheInvocation *)invocation templateString:(NSString *)templateString innerRange:(NSRange)innerRange inverted:(BOOL)inverted elements:(NSArray *)elems GRMUSTACHE_API_INTERNAL;
++ (id)sectionElementWithExpression:(id<GRMustacheExpression>)expression templateString:(NSString *)templateString innerRange:(NSRange)innerRange inverted:(BOOL)inverted elements:(NSArray *)elems GRMUSTACHE_API_INTERNAL;
 
 /**
- * Returns the rendering of inner rendering elements for the provided context,
- * without any invocation nor interpretation.
+ * Returns the rendering of inner elements.
  *
- * @param context       A context stack for rendering inner elements.
- * @param rootTemplate  A template whose delegate methods should be called
- *                      whenever relevant.
+ * @param renderingContext    A rendering context stack.
+ * @param filterContext       A filters context stack.
+ * @param delegatingTemplate  A template.
+ * @param delegates           An array of GRMustacheTemplateDelegate objects
+ *                            whose callbacks should be called whenever
+ *                            relevant, with _delegatingTemplate_ as a template.
  *
- * @return The rendering of the section.
+ * @return The rendering of inner elements.
  */
-- (NSString *)renderElementsWithContext:(GRMustacheContext *)context inRootTemplate:(GRMustacheTemplate *)rootTemplate GRMUSTACHE_API_INTERNAL;
+- (NSString *)renderElementsWithRenderingContext:(GRMustacheContext *)renderingContext filterContext:(GRMustacheContext *)filterContext delegatingTemplate:(GRMustacheTemplate *)delegatingTemplate delegates:(NSArray *)delegates GRMUSTACHE_API_INTERNAL;
 
 @end

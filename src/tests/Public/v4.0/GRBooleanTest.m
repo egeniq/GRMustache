@@ -20,9 +20,16 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#import "GRBooleanTest.h"
+#define GRMUSTACHE_VERSION_MAX_ALLOWED GRMUSTACHE_VERSION_4_0
+#import "GRMustachePublicAPITest.h"
 
-@interface GRBooleanTestSupport: NSObject
+@interface GRBooleanTest : GRMustachePublicAPITest
+@end
+
+@interface GRBooleanTestSupport: NSObject {
+    BOOL _customGetterBOOLProperty;
+    bool _customGetterboolProperty;
+}
 @property (readonly) bool boolFalseProperty;
 @property (readonly) bool boolTrueProperty;
 @property (readonly) BOOL BOOLFalseProperty;
@@ -38,8 +45,8 @@
 @end
 
 @implementation GRBooleanTestSupport
-@synthesize customGetterBOOLProperty;
-@synthesize customGetterboolProperty;
+@synthesize customGetterBOOLProperty=_customGetterBOOLProperty;
+@synthesize customGetterboolProperty=_customGetterboolProperty;
 - (bool)boolFalseProperty { return NO; }
 - (bool)boolTrueProperty { return YES; }
 - (BOOL)BOOLFalseProperty { return NO; }

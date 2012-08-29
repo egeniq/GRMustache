@@ -3,7 +3,7 @@ GRMustache
 
 GRMustache is a production-ready implementation of [Mustache](http://mustache.github.com/) templates for MacOS Cocoa and iOS.
 
-**July 1st, 2012: GRMustache 4.1.1 is out.** [Release notes](GRMustache/blob/master/RELEASE_NOTES.md)
+**August 6th, 2012: GRMustache 4.3.2 is out.** [Release notes](GRMustache/blob/master/RELEASE_NOTES.md)
 
 Breaking news on Twitter: http://twitter.com/GRMustache
 
@@ -50,6 +50,8 @@ Documentation
 
 - [Guides/templates.md](GRMustache/blob/master/Guides/templates.md): how to load, parse, and render templates from various sources.
 - [Guides/runtime.md](GRMustache/blob/master/Guides/runtime.md): how to provide data to templates.
+- [Guides/helpers.md](GRMustache/blob/master/Guides/helpers.md): how to process the template canvas before it is rendered with Mustache "lambda sections".
+- [Guides/filters.md](GRMustache/blob/master/Guides/filters.md): how to process data before it is rendered with "filters".
 - [Guides/delegate.md](GRMustache/blob/master/Guides/delegate.md): how to hook into template rendering.
 
 ### Sample code
@@ -68,11 +70,11 @@ FAQ
     
     A: Check [Guides/sample_code/indexes.md](GRMustache/blob/master/Guides/sample_code/indexes.md)
 
-- **Q: How do I implement filters, format numbers, dates, etc?**
+- **Q: How do I format numbers and dates, or localize portions of templates, etc?**
     
-    A: Check documentation of [Mustache lambda sections](GRMustache/blob/master/Guides/runtime/helpers.md) first. If it would not help, maybe you'll get some inspiration from the [number formatting sample code](GRMustache/blob/master/Guides/sample_code/number_formatting.md). If you are still stuck after those, go and look for a [closed issue](GRMustache/issues?state=closed) that covers your need. Finally, open a new issue :-)
+    A: [Filters](GRMustache/blob/master/Guides/filters.md) and [Mustache lambda sections](GRMustache/blob/master/Guides/helpers.md) are your friends. *Filters* act on the data you provide to the template, and are typically a good match for formatting values. *Lambda sections* act directly on the template canvas, and can help you process a full portion of a template.
 
-- **Q: Does GRMustache provides any layout facility?**
+- **Q: Does GRMustache provide any layout facility?**
     
     A: No. But there is a [sample Xcode project](GRMustache/tree/master/Guides/sample_code/layout) that demonstrates how to do that.
 
@@ -80,13 +82,17 @@ FAQ
 
     A: This can be done by providing your template a delegate: check [Guides/delegate.md](GRMustache/blob/master/Guides/delegate.md).
 
-- **Q: I have a bunch of template partials that live in memory, not in the file system. How do I include them?**
+- **Q: I have a bunch of templates and partials that live in memory / a database / the cloud / wherever.**
     
     A: Check [Guides/template_repositories.md](GRMustache/blob/master/Guides/template_repositories.md).
 
 - **Q: What is this NSUndefinedKeyException stuff?**
 
     A: When GRMustache has to try several objects until it finds the one that provides a `{{key}}`, several NSUndefinedKeyException are raised and caught. Let us double guess you: it's likely that you wish Xcode would stop breaking on those exceptions. This use case is covered in [Guides/runtime/context_stack.md](GRMustache/blob/master/Guides/runtime/context_stack.md).
+
+- **Q: Why does GRMustache need JRSwizzle?**
+
+    A: GRMustache will [swizzle](http://www.mikeash.com/pyblog/friday-qa-2010-01-29-method-replacement-for-fun-and-profit.html) the implementation of `valueForUndefinedKey:` in the NSObject and NSManagedObject classes when you invoke `[GRMustache preventNSUndefinedKeyExceptionAttack]`. This use case is covered in [Guides/runtime/context_stack.md](GRMustache/blob/master/Guides/runtime/context_stack.md). The dreadful swizzling happens in [src/classes/GRMustacheNSUndefinedKeyExceptionGuard.m](GRMustache/blob/master/src/classes/GRMustacheNSUndefinedKeyExceptionGuard.m).
 
 
 Contribution wish-list

@@ -20,7 +20,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#import "GRMustacheHelper_private.h"
+#import "GRMustacheHelper.h"
+#import "GRMustacheSection.h"
 
 
 // =============================================================================
@@ -59,8 +60,7 @@
 
 - (NSString *)renderSection:(GRMustacheSection *)section
 {
-    NSAssert(NO, @"abstract method");
-    return nil;
+    return [section render];
 }
 
 @end

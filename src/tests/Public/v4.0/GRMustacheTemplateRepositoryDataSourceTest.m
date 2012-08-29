@@ -20,9 +20,16 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#import "GRMustacheTemplateRepositoryDataSourceTest.h"
+#define GRMUSTACHE_VERSION_MAX_ALLOWED GRMUSTACHE_VERSION_4_0
+#import "GRMustachePublicAPITest.h"
 
-@interface GRMustacheTemplateRepositoryTestDataSource : NSObject<GRMustacheTemplateRepositoryDataSource>
+@interface GRMustacheTemplateRepositoryDataSourceTest : GRMustachePublicAPITest
+@end
+
+@interface GRMustacheTemplateRepositoryTestDataSource : NSObject<GRMustacheTemplateRepositoryDataSource> {
+    NSUInteger _templateIDForNameCount;
+    NSUInteger _templateStringForTemplateIDCount;
+}
 @property (nonatomic) NSUInteger templateIDForNameCount;
 @property (nonatomic) NSUInteger templateStringForTemplateIDCount;
 @end

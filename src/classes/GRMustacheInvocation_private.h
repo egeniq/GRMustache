@@ -22,84 +22,33 @@
 
 #import <Foundation/Foundation.h>
 #import "GRMustacheAvailabilityMacros_private.h"
-#import "GRMustache_private.h"
 
-@class GRMustacheContext;
 @class GRMustacheToken;
 
-/**
- * The GRMustacheInvocation class is the NSInvocation of GRMustache.
- *
- * Whenever Mustache has to render, say, a tag such as `{{foo.bar}}`, it has
- * to invoke the `foo` key in the current context stack, then the `bar` key, and
- * render the returned value.
- *
- * The GRMustacheInvocation encapsulates this whole process.
- * 
- * Instances are created by GRMustacheCompiler, and stored by rendering
- * elements that query the user data: GRMustacheVariableElement and
- * GRMustacheSectionElement.
- *
- * A rendering element would send the `invokeWithContext:` message to its
- * invocation. The invocation would perform the key lookup in the context stack,
- * and set its return value. The rendering element would the process this return
- * value.
- *
- * Invocations are exposed to the template's delegate: library users can modify
- * the return value of invocations, and alter the template rendering.
- *
- * @see GRMustacheCompiler
- * @see GRMustacheVariableElement
- * @see GRMustacheSectionElement
- * @see GRMustacheTemplateDelegate
- */
+// Documented in GRMustacheInvocation.h
 @interface GRMustacheInvocation : NSObject {
 @private
+    NSString *_key;
     id _returnValue;
-    GRMustacheToken *_token;
+    GRMustacheToken *_debuggingToken;
 }
 
 // Documented in GRMustacheInvocation.h
-@property (nonatomic, readonly) NSString *key GRMUSTACHE_API_PUBLIC;
+@property (nonatomic, retain) NSString *key GRMUSTACHE_API_PUBLIC;
 
-// Documented in GRMustacheInvocation.h
+/**
+ * The getter of this property is documented in GRMustacheInvocation.h.
+ *
+ * The setter allow GRMustacheExpression objects to prepare invocations.
+ *
+ * @see GRMustacheExpression
+ */
 @property (nonatomic, retain) id returnValue GRMUSTACHE_API_PUBLIC;
 
 /**
- * Builds an invocation from a token and an array of keys.
- *
- * For a token content @"foo", the keys would contain a single @"foo" string.
- *
- * For a token content @"foo.bar", the keys would contain @"foo" and "bar".
- *
- * For a token content @".", the keys would contain a single @"." string.
- *
- * For a token content @".foo", the keys would contain @"." and "foo".
- *
- * The _keys_ parameter fully determines the behavior of the
- * `invokeWithContext:` method.
- *
- * The _token_ argument is solely used by the `description` method of the
- * invocation, so that the library user can easily locate the source of an
- * invocation in his template delegate methods.
- *
- * @param token   A token
- * @param keys    An array of keys
- *
- * @return an invocation
- *
- * @see invokeWithContext:
- * @see GRMustacheToken
- * @see GRMustacheTemplateDelegate
+ * The debugging token of an invocation allows an invocation to build a
+ * meaningful description like "`{{ foo }}` at line 12 of /path/to/template".
  */
-+ (id)invocationWithToken:(GRMustacheToken *)token keys:(NSArray *)keys GRMUSTACHE_API_INTERNAL;
+@property (nonatomic, retain) GRMustacheToken *debuggingToken GRMUSTACHE_API_INTERNAL;
 
-/**
- * Performs key lookup in the context stack, and sets the return value.
- *
- * @param context   The context stack where invocation keys should be looked up.
- *
- * @see GRMustacheContext
- */
-- (void)invokeWithContext:(GRMustacheContext *)context GRMUSTACHE_API_INTERNAL;
 @end

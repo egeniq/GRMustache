@@ -33,12 +33,27 @@ extern BOOL GRMustacheContextDidCatchNSUndefinedKeyException;
 
 /**
  * The GRMustacheContext class implements a context stack as a linked list.
+ *
+ * Use the `valueForKey:` method in order to fetch values out of a context.
  */
 @interface GRMustacheContext: NSObject {
 @private
     id _object;
     GRMustacheContext *_parent;
 }
+
+/**
+ * Sends the `valueForKey:` message to _object_ with the provided _key_, and
+ * returns the result. Should `valueForKey:` raise an NSUndefinedKeyException,
+ * returns nil.
+ *
+ * @param key     The searched key
+ * @param object  The queried object
+ *
+ * @return `[object valueForKey:key]`, or nil should an NSUndefinedKeyException
+ *         be raised.
+ */
++ (id)valueForKey:(NSString *)key inObject:(id)object GRMUSTACHE_API_INTERNAL;
 
 /**
  * The top object is the context stack.
@@ -83,26 +98,10 @@ extern BOOL GRMustacheContextDidCatchNSUndefinedKeyException;
 /**
  * Returns a new context stack by adding an object at the top.
  *
- * @param object  The top object of the retured context stack.
+ * @param object  The top object of the returned context stack.
  *
  * @return A new context stack.
  */
 - (GRMustacheContext *)contextByAddingObject:(id)object GRMUSTACHE_API_INTERNAL;
-
-/**
- * Looks for an object in the context stack that returns a non-nil value when
- * sent the `valueForKey:` message with the provided key, and return this value.
- *
- * If scoped is YES, only the top object is tested.
- *
- * If scoped is NO, all objects in the stack are tested, starting with the
- * top object.
- *
- * @param key     The searched key
- * @param scoped  YES if the lookup should test all objects in the stack.
- *
- * @return The found value
- */
-- (id)valueForKey:(NSString *)key scoped:(BOOL)scoped GRMUSTACHE_API_INTERNAL;
 
 @end

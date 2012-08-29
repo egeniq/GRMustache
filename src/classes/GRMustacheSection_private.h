@@ -32,11 +32,13 @@
 @private
     GRMustacheSectionElement *_sectionElement;
     GRMustacheContext *_renderingContext;
-    GRMustacheTemplate *_rootTemplate;
+    id _filterContext;
+    GRMustacheTemplate *_delegatingTemplate;
+    NSArray *_delegates;
 }
 
 // Documented in GRMustacheSection.h
-@property (nonatomic, retain, readonly) GRMustacheContext *renderingContext GRMUSTACHE_API_PUBLIC;
+@property (nonatomic, retain, readonly) GRMustacheContext *renderingContext GRMUSTACHE_API_PUBLIC_BUT_DEPRECATED;
 
 // Documented in GRMustacheSection.h
 @property (nonatomic, readonly) NSString *innerTemplateString GRMUSTACHE_API_PUBLIC;
@@ -44,17 +46,23 @@
 // Documented in GRMustacheSection.h
 - (NSString *)render GRMUSTACHE_API_PUBLIC;
 
+// Documented in GRMustacheSection.h
+- (NSString *)renderTemplateString:(NSString *)string error:(NSError **)outError GRMUSTACHE_API_PUBLIC;
+
 /**
  * Builds and returns a section suitable for GRMustacheHelper.
  *
- * @param sectionElement    The underlying sectionElement
- * @param renderingContext  The rendering context exposed to the library user
- * @param rootTemplate      A template whose delegate methods should be called
- *                          whenever relevant.
+ * @param sectionElement      The underlying sectionElement.
+ * @param renderingContext    A rendering context stack.
+ * @param filterContext       A filters context stack.
+ * @param delegatingTemplate  A template.
+ * @param delegates           An array of GRMustacheTemplateDelegate objects
+ *                            whose callbacks should be called whenever
+ *                            relevant, with _delegatingTemplate_ as a template.
  *
  * @return A section.
  *
  * @see GRMustacheHelper
  */
-+ (id)sectionWithSectionElement:(GRMustacheSectionElement *)sectionElement renderingContext:(GRMustacheContext *)renderingContext rootTemplate:(GRMustacheTemplate *)rootTemplate GRMUSTACHE_API_INTERNAL;
++ (id)sectionWithSectionElement:(GRMustacheSectionElement *)sectionElement renderingContext:(GRMustacheContext *)renderingContext filterContext:(GRMustacheContext *)filterContext delegatingTemplate:(GRMustacheTemplate *)delegatingTemplate delegates:(NSArray *)delegates GRMUSTACHE_API_INTERNAL;
 @end

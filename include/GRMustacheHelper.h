@@ -39,7 +39,7 @@
  * invokes the `renderSection:` method of the helper, and inserts the raw return
  * value in the template rendering.
  *
- * **Companion guide:** https://github.com/groue/GRMustache/blob/master/Guides/runtime/helpers.md
+ * **Companion guide:** https://github.com/groue/GRMustache/blob/master/Guides/helpers.md
  *
  * @since v1.9
  */
@@ -66,13 +66,11 @@
 // =============================================================================
 #pragma mark - GRMustacheHelper
 
-#if NS_BLOCKS_AVAILABLE
-
 /**
  * The GRMustacheHelper class helps building mustache helpers without writing a
  * custom class that conforms to the GRMustacheHelper protocol.
  *
- * **Companion guide:** https://github.com/groue/GRMustache/blob/master/Guides/runtime/helpers.md
+ * **Companion guide:** https://github.com/groue/GRMustache/blob/master/Guides/helpers.md
  *
  * @see GRMustacheHelper protocol
  *
@@ -81,8 +79,10 @@
 @interface GRMustacheHelper: NSObject<GRMustacheHelper>
 
 ////////////////////////////////////////////////////////////////////////////////
-/// @name Creating helper objects
+/// @name Creating Helpers
 ////////////////////////////////////////////////////////////////////////////////
+
+#if NS_BLOCKS_AVAILABLE
 
 /**
  * Returns a GRMustacheHelper object that executes the provided block when
@@ -95,6 +95,7 @@
  * @since v2.0
  */
 + (id)helperWithBlock:(NSString *(^)(GRMustacheSection* section))block AVAILABLE_GRMUSTACHE_VERSION_4_0_AND_LATER;
-@end
 
 #endif /* if NS_BLOCKS_AVAILABLE */
+
+@end
