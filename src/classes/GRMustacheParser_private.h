@@ -81,6 +81,7 @@
     id<GRMustacheParserDelegate> _delegate;
     NSString *_otag;
     NSString *_ctag;
+    NSMutableSet *_pragmas;
 }
 
 /**
@@ -92,6 +93,12 @@
  * @see GRMustacheParserDelegate
  */
 @property (nonatomic, assign) id<GRMustacheParserDelegate> delegate GRMUSTACHE_API_INTERNAL;
+
+/**
+ * A set of all pragmas found while parsing. Pragmas are defined via pragma tags
+ * such as `{{% FILTERS }}`.
+ */
+@property (nonatomic, strong, readonly) NSMutableSet *pragmas GRMUSTACHE_API_INTERNAL;
 
 /**
  * The parser will invoke its delegate as it builds tokens from the template

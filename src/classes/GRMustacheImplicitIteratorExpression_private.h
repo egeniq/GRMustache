@@ -20,8 +20,26 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#define GRMUSTACHE_VERSION_MAX_ALLOWED GRMUSTACHE_VERSION_4_0
-#import "GRMustachePublicAPITest.h"
+#import "GRMustacheExpression_private.h"
 
-@interface GRSpecificationSuitesTest : GRMustachePublicAPITest
+/**
+ * The GRMustacheImplicitIteratorExpression is able to return the value of the
+ * top object of a context stack.
+ *
+ * @see GRMustacheExpression
+ */
+@interface GRMustacheImplicitIteratorExpression : NSObject<GRMustacheExpression> {
+@private
+    // GRMustacheToken *_debuggingToken;
+}
+
+/**
+ * Returns an "implicit iterator" expression.
+ *
+ * For instance, the Mustache tag `{{ . }}` contains an implicit iterator
+ * expression.
+ *
+ * @return A GRMustacheImplicitIteratorExpression.
+ */
++ (id)expression;
 @end

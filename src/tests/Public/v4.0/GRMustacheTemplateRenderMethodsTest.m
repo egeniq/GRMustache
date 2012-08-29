@@ -20,17 +20,24 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#import "GRMustacheTemplateRenderMethodsTest.h"
+#define GRMUSTACHE_VERSION_MAX_ALLOWED GRMUSTACHE_VERSION_4_0
+#import "GRMustachePublicAPITest.h"
 #import "JSONKit.h"
 
-@interface GRMustacheTemplateRenderMethodsTestSupport: NSObject
+@interface GRMustacheTemplateRenderMethodsTest : GRMustachePublicAPITest
+@end
+
+@interface GRMustacheTemplateRenderMethodsTestSupport: NSObject {
+    NSString *_stringProperty;
+    BOOL _BOOLProperty;
+}
 @property (nonatomic, retain) NSString *stringProperty;
 @property (nonatomic) BOOL BOOLProperty;
 @end
 
 @implementation GRMustacheTemplateRenderMethodsTestSupport
-@synthesize stringProperty;
-@synthesize BOOLProperty;
+@synthesize stringProperty=_stringProperty;
+@synthesize BOOLProperty=_BOOLProperty;
 @end
 
 @interface GRMustacheTemplateRenderMethodsTest()

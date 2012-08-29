@@ -20,7 +20,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#import "GRMustacheParsingErrorsTest.h"
+#define GRMUSTACHE_VERSION_MAX_ALLOWED GRMUSTACHE_VERSION_4_0
+#import "GRMustachePublicAPITest.h"
+
+@interface GRMustacheParsingErrorsTest : GRMustachePublicAPITest
+@end
 
 @implementation GRMustacheParsingErrorsTest
 
@@ -85,6 +89,27 @@
     STAssertEquals(error.code, (NSInteger)GRMustacheErrorCodeParseError, nil);
 }
 
+- (void)testParsingReportsBadlyFormattedUnescapedVariableTag
+{
+    NSError *error;
+    STAssertNil([GRMustacheTemplate templateFromString:@"{{{a.}}}" error:&error], nil);
+    STAssertEquals(error.code, (NSInteger)GRMustacheErrorCodeParseError, nil);
+    STAssertNil([GRMustacheTemplate templateFromString:@"{{{..}}}" error:&error], nil);
+    STAssertEquals(error.code, (NSInteger)GRMustacheErrorCodeParseError, nil);
+    STAssertNil([GRMustacheTemplate templateFromString:@"{{{...}}}" error:&error], nil);
+    STAssertEquals(error.code, (NSInteger)GRMustacheErrorCodeParseError, nil);
+    STAssertNil([GRMustacheTemplate templateFromString:@"{{{....}}}" error:&error], nil);
+    STAssertEquals(error.code, (NSInteger)GRMustacheErrorCodeParseError, nil);
+    STAssertNil([GRMustacheTemplate templateFromString:@"{{&a.}}" error:&error], nil);
+    STAssertEquals(error.code, (NSInteger)GRMustacheErrorCodeParseError, nil);
+    STAssertNil([GRMustacheTemplate templateFromString:@"{{&..}}" error:&error], nil);
+    STAssertEquals(error.code, (NSInteger)GRMustacheErrorCodeParseError, nil);
+    STAssertNil([GRMustacheTemplate templateFromString:@"{{&...}}" error:&error], nil);
+    STAssertEquals(error.code, (NSInteger)GRMustacheErrorCodeParseError, nil);
+    STAssertNil([GRMustacheTemplate templateFromString:@"{{&....}}" error:&error], nil);
+    STAssertEquals(error.code, (NSInteger)GRMustacheErrorCodeParseError, nil);
+}
+
 - (void)testParsingReportsEmptySectionOpeningTag
 {
     NSError *error;
@@ -94,12 +119,38 @@
     STAssertEquals(error.code, (NSInteger)GRMustacheErrorCodeParseError, nil);
 }
 
+- (void)testParsingReportsBadlyFormattedSectionOpeningTag
+{
+    NSError *error;
+    STAssertNil([GRMustacheTemplate templateFromString:@"{{#a.}}" error:&error], nil);
+    STAssertEquals(error.code, (NSInteger)GRMustacheErrorCodeParseError, nil);
+    STAssertNil([GRMustacheTemplate templateFromString:@"{{#..}}" error:&error], nil);
+    STAssertEquals(error.code, (NSInteger)GRMustacheErrorCodeParseError, nil);
+    STAssertNil([GRMustacheTemplate templateFromString:@"{{#...}}" error:&error], nil);
+    STAssertEquals(error.code, (NSInteger)GRMustacheErrorCodeParseError, nil);
+    STAssertNil([GRMustacheTemplate templateFromString:@"{{#....}}" error:&error], nil);
+    STAssertEquals(error.code, (NSInteger)GRMustacheErrorCodeParseError, nil);
+}
+
 - (void)testParsingReportsEmptyInvertedSectionOpeningTag
 {
     NSError *error;
     STAssertNil([GRMustacheTemplate templateFromString:@"{{^}}{{/ }}" error:&error], nil);
     STAssertEquals(error.code, (NSInteger)GRMustacheErrorCodeParseError, nil);
     STAssertNil([GRMustacheTemplate templateFromString:@"{{^ }}{{/ }}" error:&error], nil);
+    STAssertEquals(error.code, (NSInteger)GRMustacheErrorCodeParseError, nil);
+}
+
+- (void)testParsingReportsBadlyFormattedInvertedSectionOpeningTag
+{
+    NSError *error;
+    STAssertNil([GRMustacheTemplate templateFromString:@"{{^a.}}" error:&error], nil);
+    STAssertEquals(error.code, (NSInteger)GRMustacheErrorCodeParseError, nil);
+    STAssertNil([GRMustacheTemplate templateFromString:@"{{^..}}" error:&error], nil);
+    STAssertEquals(error.code, (NSInteger)GRMustacheErrorCodeParseError, nil);
+    STAssertNil([GRMustacheTemplate templateFromString:@"{{^...}}" error:&error], nil);
+    STAssertEquals(error.code, (NSInteger)GRMustacheErrorCodeParseError, nil);
+    STAssertNil([GRMustacheTemplate templateFromString:@"{{^....}}" error:&error], nil);
     STAssertEquals(error.code, (NSInteger)GRMustacheErrorCodeParseError, nil);
 }
 

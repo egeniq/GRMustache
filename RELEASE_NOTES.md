@@ -3,9 +3,69 @@ GRMustache Release Notes
 
 You can compare the performances of GRMustache versions at https://github.com/groue/GRMustacheBenchmark.
 
+
+## v4.3.2
+
+Bugfix: Avoid the default `valueForKey:` implementation of Fundation collection classes like NSArray, NSSet and NSOrderedSet, which would return another collection. Fixes [issue #21](https://github.com/groue/GRMustache/issues/21).
+
+
+## v4.3.1
+
+Bugfix: this release restores the delegate callbacks while rendering alternate template strings in [helpers](Guides/helpers.md).
+
+
+## v4.3.0
+
+### Filters
+
+[Filters](Guides/filters.md) allow you to process values before they are rendered, and supersede "section delegates" as the preferred way to filter values. The [number formatting](Guides/sample_code/number_formatting.md) and [array indexes.md](Guides/sample_code/indexes.md) sample codes have been updated accordingly.
+
+**New APIs**:
+
+```objc
+@interface GRMustacheSection: NSObject
+- (NSString *)renderTemplateString:(NSString *)string error:(NSError **)outError;
+@end
+
+@interface GRMustacheTemplate: NSObject
++ (NSString *)renderObject:(id)object withFilters:(id)filters fromString:(NSString *)templateString error:(NSError **)outError;
++ (NSString *)renderObject:(id)object withFilters:(id)filters fromContentsOfFile:(NSString *)path error:(NSError **)outError;
++ (NSString *)renderObject:(id)object withFilters:(id)filters fromContentsOfURL:(NSURL *)url error:(NSError **)outError;
++ (NSString *)renderObject:(id)object withFilters:(id)filters fromResource:(NSString *)name bundle:(NSBundle *)bundle error:(NSError **)outError;
++ (NSString *)renderObject:(id)object withFilters:(id)filters fromResource:(NSString *)name withExtension:(NSString *)ext bundle:(NSBundle *)bundle error:(NSError **)outError;
+- (NSString *)renderObject:(id)object withFilters:(id)filters;
+- (NSString *)renderObjectsInArray:(NSArray *)objects;
+- (NSString *)renderObjectsInArray:(NSArray *)objects withFilters:(id)filters;
+@end
+```
+
+**Deprecated APIs**:
+
+```objc
+@interface GRMustacheSection: NSObject
+// Use renderTemplateString:error: instead.
+@property (nonatomic, retain, readonly) id renderingContext;
+@end
+
+@interface GRMustacheTemplate: NSObject
+// Use renderObjectsInArray: instead.
+- (NSString *)renderObjects:(id)object, ...;
+@end
+```
+
+## v4.2.0
+
+### Section delegates
+
+When an object that is attached to a Mustache section conforms to the [GRMustacheDelegate protocol](Guides/delegate.md), it can observe and alter the rendering of the inner content of the section, just like the template's delegate.
+
+This provides you with a better way to encapsulate behaviors that, with previous versions of GRMustache, would bloat the one and only delegate of a template.
+
+Section delegates are used in the [number formatting sample code](Guides/sample_code/number_formatting.md), where the NSNumberFormatter class is given the opportunity to render formatted numbers.
+
 ## v4.1.1
 
-**Total inline documentation**
+### Total inline documentation
 
 Headers contain documentation for every exposed API.
 
@@ -54,9 +114,7 @@ GRMustache used to output badly formatted errors. They are now easier to read.
 
 ## v4.0.0
 
-**Performance improvements**
-
-**Zero numbers are false**
+### Zero numbers are false
 
 GRMustache now considers all `NSNumber` instances whose `boolValue` is `NO` as false, when considering whether a section should render or not.
 
@@ -66,7 +124,7 @@ This change lets you extend the mustache language with proxy objects (objects th
 
 See [Guides/sample_code/indexes.md](Guides/sample_code/indexes.md) for a discussion on proxy objects.
 
-**Total NSUndefinedException swallowing**
+### Total NSUndefinedException swallowing
 
 Whenever GRMustache performs some key lookup and `valueForKey:` raises a NSUndefinedException, GRMustache swallows it and keep on looking for the key up the context stack.
 
@@ -76,7 +134,7 @@ This change lets you extend the mustache language with proxy objects (objects th
 
 See [Guides/sample_code/indexes.md](Guides/sample_code/indexes.md) for a discussion on proxy objects.
 
-**Support for `.name` keys**
+### Support for `.name` keys
 
 Keys prefixed by a dot prevent GRMustache to look up the [context stack](Guides/runtime/context_stack.md).
 
@@ -90,7 +148,7 @@ Restored intended architectures: armv6+armv7+i386 for libGRMustache3-iOS, i386+x
 
 ## v3.0.0
 
-**There is no option**
+### There is no option
 
 Removed APIs:
 
@@ -132,9 +190,9 @@ typedef NSUInteger GRMustacheTemplateOptions;
 
 ## v2.0.0
 
-**Performance improvements and API simplification**
+### API simplification
 
-### New APIs:
+**New APIs**
 
 ```objc
 enum {
@@ -161,7 +219,7 @@ enum {
 @end
 ```
 
-### Removed APIs and behaviors
+**Removed APIs and behaviors**
 
 ```objc
 enum {
@@ -269,7 +327,7 @@ New protocol:
 
 ## v1.12.2
 
-Restore performances of v1.12.0
+Restore parsing performances of v1.12.0
 
 ## v1.12.1
 
@@ -346,15 +404,15 @@ Upgrade GRMustache, and get deprecation warnings when you use deprecated APIs. Y
 
 ## v1.10.2
 
-Performance improvements
+**Drastic rendering performance improvements**
 
 ## v1.10.1
 
-Performance improvements
+**Rendering performance improvements**
 
 ## v1.10
 
-**Improved Handlebars.js support and performance improvements**
+**Improved Handlebars.js support**
 
 Now `{{foo/bar}}` and `{{foo.bar}}` syntaxes are both supported.
 
@@ -629,7 +687,7 @@ Bug fixes
 
 ## v1.1.2
 
-**Template compiling performance improvement**
+**Parsing performance improvement**
 
 ## v1.1.1
 

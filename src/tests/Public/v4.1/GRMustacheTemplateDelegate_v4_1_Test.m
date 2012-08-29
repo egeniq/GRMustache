@@ -20,9 +20,19 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#import "GRMustacheTemplateDelegate_v4_1_Test.h"
+#define GRMUSTACHE_VERSION_MAX_ALLOWED GRMUSTACHE_VERSION_4_1
+#import "GRMustachePublicAPITest.h"
 
-@interface GRMustacheTemplateRecorder_v4_1 : NSObject<GRMustacheTemplateDelegate>
+@interface GRMustacheTemplateDelegate_v4_1_Test : GRMustachePublicAPITest
+@end
+
+@interface GRMustacheTemplateRecorder_v4_1 : NSObject<GRMustacheTemplateDelegate> {
+    NSUInteger _willRenderReturnValueOfInvocationCount;
+    NSUInteger _didRenderReturnValueOfInvocationCount;
+    NSUInteger _willInterpretReturnValueOfInvocationAsCount;
+    NSUInteger _didInterpretReturnValueOfInvocationAsCount;
+    GRMustacheInterpretation _lastInterpretation;
+}
 @property (nonatomic) NSUInteger willRenderReturnValueOfInvocationCount;
 @property (nonatomic) NSUInteger didRenderReturnValueOfInvocationCount;
 @property (nonatomic) NSUInteger willInterpretReturnValueOfInvocationAsCount;

@@ -20,8 +20,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#define GRMUSTACHE_VERSION_MAX_ALLOWED GRMUSTACHE_VERSION_4_1
-#import "GRMustachePublicAPITest.h"
+#import <Foundation/Foundation.h>
 
-@interface GRMustacheTemplateDelegate_v4_1_Test : GRMustachePublicAPITest
+@class GRMustacheContext;
+
+@interface GRMustacheFilterLibrary : NSObject
++ (GRMustacheContext *)filterContextWithFilters:(id)filters;
 @end

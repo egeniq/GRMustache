@@ -20,9 +20,15 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#import "GRMustacheHelperTest.h"
+#define GRMUSTACHE_VERSION_MAX_ALLOWED GRMUSTACHE_VERSION_4_0
+#import "GRMustachePublicAPITest.h"
 
-@interface GRMustacheStringHelper : NSObject<GRMustacheHelper>
+@interface GRMustacheHelperTest : GRMustachePublicAPITest
+@end
+
+@interface GRMustacheStringHelper : NSObject<GRMustacheHelper> {
+    NSString *_string;
+}
 @property (nonatomic, copy) NSString *string;
 @end
 
@@ -39,7 +45,11 @@
 }
 @end
 
-@interface GRMustacheRecorderHelper : NSObject<GRMustacheHelper>
+@interface GRMustacheRecorderHelper : NSObject<GRMustacheHelper> {
+    NSUInteger _invocationCount;
+    NSString *_lastInnerTemplateString;
+    NSString *_lastRenderedContent;
+}
 @property (nonatomic) NSUInteger invocationCount;
 @property (nonatomic, retain) NSString *lastInnerTemplateString;
 @property (nonatomic, retain) NSString *lastRenderedContent;
@@ -64,7 +74,9 @@
 }
 @end
 
-@interface GRMustacheTemplateHelper : NSObject<GRMustacheHelper>
+@interface GRMustacheTemplateHelper : NSObject<GRMustacheHelper> {
+    NSString *_templateString;
+}
 @property (nonatomic, copy) NSString *templateString;
 @end
 

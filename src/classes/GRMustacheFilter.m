@@ -20,34 +20,85 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#import <Foundation/Foundation.h>
-#import "GRMustacheAvailabilityMacros_private.h"
+#import "GRMustacheFilter.h"
+#import "GRMustacheInvocation.h"
 
-@class GRMustacheSection;
-
-// =============================================================================
-#pragma mark - <GRMustacheHelper>
-
-// Documented in GRMustacheHelper.h
-@protocol GRMustacheHelper<NSObject>
-@required
-
-// Documented in GRMustacheHelper.h
-- (NSString *)renderSection:(GRMustacheSection *)section GRMUSTACHE_API_PUBLIC;
-@end
-
+NSString * const GRMustacheFilterException = @"GRMustacheFilterException";
 
 // =============================================================================
-#pragma mark - GRMustacheHelper
-
-// Documented in GRMustacheHelper.h
-@interface GRMustacheHelper: NSObject<GRMustacheHelper>
+#pragma mark - Private concrete class GRMustacheBlockFilter
 
 #if NS_BLOCKS_AVAILABLE
 
-// Documented in GRMustacheHelper.h
-+ (id)helperWithBlock:(NSString *(^)(GRMustacheSection* section))block GRMUSTACHE_API_PUBLIC;
+/**
+ * Private subclass of GRMustacheFilter that filter values by calling a block.
+ */
+@interface GRMustacheBlockFilter: GRMustacheFilter {
+@private
+    id(^_block)(id value);
+}
+- (id)initWithBlock:(id(^)(id value))block;
+@end
 
 #endif /* if NS_BLOCKS_AVAILABLE */
 
+
+// =============================================================================
+#pragma mark - GRMustacheFilter
+
+@implementation GRMustacheFilter
+
+#if NS_BLOCKS_AVAILABLE
+
++ (id)filterWithBlock:(id(^)(id value))block
+{
+    return [[[GRMustacheBlockFilter alloc] initWithBlock:block] autorelease];
+}
+
+#endif /* if NS_BLOCKS_AVAILABLE */
+
+- (id)transformedValue:(id)object
+{
+    return object;
+}
+
 @end
+
+
+// =============================================================================
+#pragma mark - Private concrete class GRMustacheBlockFilter
+
+#if NS_BLOCKS_AVAILABLE
+
+@implementation GRMustacheBlockFilter
+
+- (id)initWithBlock:(id(^)(id value))block
+{
+    self = [self init];
+    if (self) {
+        _block = [block copy];
+    }
+    return self;
+}
+
+
+- (void)dealloc
+{
+    [_block release];
+    [super dealloc];
+}
+
+#pragma mark <GRMustacheFilter>
+
+- (id)transformedValue:(id)object
+{
+    if (_block) {
+        return _block(object);
+    }
+    
+    return nil;
+}
+
+@end
+
+#endif /* if NS_BLOCKS_AVAILABLE */

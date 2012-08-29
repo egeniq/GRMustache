@@ -23,19 +23,21 @@
 #import "GRMustacheSectionElement_private.h"
 #import "GRMustacheContext_private.h"
 #import "GRMustacheInvocation_private.h"
-#import "GRMustacheHelper_private.h"
+#import "GRMustacheExpression_private.h"
+#import "GRMustacheHelper.h"
 #import "GRMustacheRenderingElement_private.h"
 #import "GRMustacheTemplate_private.h"
 #import "GRMustacheSection_private.h"
+#import "GRMustacheTemplateDelegate.h"
 
 @interface GRMustacheSectionElement()
 
 /**
- * The rendering of Mustache sections depend on the value they are attached to,
- * whether they are truthy, falsey, enumerable, or helpers. The value is fetched
- * by applying this invocation to a rendering context.
+ * The rendering of Mustache sections depend on the object they are attached to,
+ * whether they are truthy, falsey, enumerable, or helpers. The object is
+ * fetched by applying this expression to a rendering context.
  */
-@property (nonatomic, retain) GRMustacheInvocation *invocation;
+@property (nonatomic, retain) id<GRMustacheExpression> expression;
 
 /**
  * The template string containing the inner template string of the section.
@@ -60,27 +62,27 @@
 @property (nonatomic, retain) NSArray *elems;
 
 /**
- * @see +[GRMustacheSectionElement sectionElementWithInvocation:templateString:innerRange:inverted:elements:]
+ * @see +[GRMustacheSectionElement sectionElementWithExpression:templateString:innerRange:inverted:elements:]
  */
-- (id)initWithInvocation:(GRMustacheInvocation *)invocation templateString:(NSString *)templateString innerRange:(NSRange)innerRange inverted:(BOOL)inverted elements:(NSArray *)elems;
+- (id)initWithExpression:(id<GRMustacheExpression>)expression templateString:(NSString *)templateString innerRange:(NSRange)innerRange inverted:(BOOL)inverted elements:(NSArray *)elems;
 @end
 
 
 @implementation GRMustacheSectionElement
 @synthesize templateString=_templateString;
 @synthesize innerRange=_innerRange;
-@synthesize invocation=_invocation;
+@synthesize expression=_expression;
 @synthesize inverted=_inverted;
 @synthesize elems=_elems;
 
-+ (id)sectionElementWithInvocation:(GRMustacheInvocation *)invocation templateString:(NSString *)templateString innerRange:(NSRange)innerRange inverted:(BOOL)inverted elements:(NSArray *)elems
++ (id)sectionElementWithExpression:(id<GRMustacheExpression>)expression templateString:(NSString *)templateString innerRange:(NSRange)innerRange inverted:(BOOL)inverted elements:(NSArray *)elems
 {
-    return [[[self alloc] initWithInvocation:invocation templateString:templateString innerRange:innerRange inverted:inverted elements:elems] autorelease];
+    return [[[self alloc] initWithExpression:expression templateString:templateString innerRange:innerRange inverted:inverted elements:elems] autorelease];
 }
 
 - (void)dealloc
 {
-    [_invocation release];
+    [_expression release];
     [_templateString release];
     [_elems release];
     [super dealloc];
@@ -91,12 +93,12 @@
     return [_templateString substringWithRange:_innerRange];
 }
 
-- (NSString *)renderElementsWithContext:(GRMustacheContext *)context inRootTemplate:(GRMustacheTemplate *)rootTemplate
+- (NSString *)renderElementsWithRenderingContext:(GRMustacheContext *)renderingContext filterContext:(GRMustacheContext *)filterContext delegatingTemplate:(GRMustacheTemplate *)delegatingTemplate delegates:(NSArray *)delegates
 {
     NSMutableString *result = [NSMutableString string];
     @autoreleasepool {
         for (id<GRMustacheRenderingElement> elem in _elems) {
-            [result appendString:[elem renderContext:context inRootTemplate:rootTemplate]];
+            [result appendString:[elem renderRenderingContext:renderingContext filterContext:filterContext delegatingTemplate:delegatingTemplate delegates:delegates]];
         }
     }
     return result;
@@ -104,92 +106,95 @@
 
 #pragma mark <GRMustacheRenderingElement>
 
-- (NSString *)renderContext:(GRMustacheContext *)context inRootTemplate:(GRMustacheTemplate *)rootTemplate
+- (NSString *)renderRenderingContext:(GRMustacheContext *)renderingContext filterContext:(GRMustacheContext *)filterContext delegatingTemplate:(GRMustacheTemplate *)delegatingTemplate delegates:(NSArray *)delegates
 {
     NSString *result = nil;
     @autoreleasepool {
         
-        // invoke
+        // evaluate
         
-        [_invocation invokeWithContext:context];
-        if ([rootTemplate.delegate respondsToSelector:@selector(template:willInterpretReturnValueOfInvocation:as:)]) {
-            // 4.1 API
-            [rootTemplate.delegate template:rootTemplate willInterpretReturnValueOfInvocation:_invocation as:GRMustacheInterpretationSection];
-        } else if ([rootTemplate.delegate respondsToSelector:@selector(template:willRenderReturnValueOfInvocation:)]) {
-            // 4.0 API
-            [rootTemplate.delegate template:rootTemplate willRenderReturnValueOfInvocation:_invocation];
+        GRMustacheInvocation *invocation = nil;
+        id object = [_expression valueForContext:renderingContext filterContext:filterContext delegatingTemplate:delegatingTemplate delegates:delegates invocation:&invocation];
+        if (invocation) {
+            [delegatingTemplate invokeDelegates:delegates willInterpretReturnValueOfInvocation:invocation as:GRMustacheInterpretationSection];
+            object = invocation.returnValue;
         }
-        id value = _invocation.returnValue;
         
+        
+        // augment delegates if necessary
+        NSArray *innerDelegates = delegates;
+        if ([object conformsToProtocol:@protocol(GRMustacheTemplateDelegate)]) {
+            if (innerDelegates) {
+                innerDelegates = [[NSArray arrayWithObject:object] arrayByAddingObjectsFromArray:innerDelegates];
+            } else {
+                innerDelegates = [NSArray arrayWithObject:object];
+            }
+        }
         
         // interpret
         
-        if (value == nil ||
-            value == [NSNull null] ||
-            ([value isKindOfClass:[NSNumber class]] && [((NSNumber*)value) boolValue] == NO) ||
-            ([value isKindOfClass:[NSString class]] && [((NSString*)value) length] == 0))
+        if (object == nil ||
+            object == [NSNull null] ||
+            ([object isKindOfClass:[NSNumber class]] && [((NSNumber*)object) boolValue] == NO) ||
+            ([object isKindOfClass:[NSString class]] && [((NSString*)object) length] == 0))
         {
             // False value
             if (_inverted) {
-                result = [[self renderElementsWithContext:context inRootTemplate:rootTemplate] retain];
+                result = [[self renderElementsWithRenderingContext:renderingContext filterContext:filterContext delegatingTemplate:delegatingTemplate delegates:innerDelegates] retain];
             }
         }
-        else if ([value isKindOfClass:[NSDictionary class]])
+        else if ([object isKindOfClass:[NSDictionary class]])
         {
             // True object value
             if (!_inverted) {
-                GRMustacheContext *innerContext = [context contextByAddingObject:value];
-                result = [[self renderElementsWithContext:innerContext inRootTemplate:rootTemplate] retain];
+                GRMustacheContext *innerContext = [renderingContext contextByAddingObject:object];
+                result = [[self renderElementsWithRenderingContext:innerContext filterContext:filterContext delegatingTemplate:delegatingTemplate delegates:innerDelegates] retain];
             }
         }
-        else if ([value conformsToProtocol:@protocol(NSFastEnumeration)])
+        else if ([object conformsToProtocol:@protocol(NSFastEnumeration)])
         {
             // Enumerable
             if (_inverted) {
                 BOOL empty = YES;
-                for (id object in value) {
+                for (id object2 in object) {
                     empty = NO;
                     break;
                 }
                 if (empty) {
-                    result = [[self renderElementsWithContext:context inRootTemplate:rootTemplate] retain];
+                    result = [[self renderElementsWithRenderingContext:renderingContext filterContext:filterContext delegatingTemplate:delegatingTemplate delegates:innerDelegates] retain];
                 }
             } else {
                 result = [[NSMutableString string] retain];
-                for (id object in value) {
-                    GRMustacheContext *innerContext = [context contextByAddingObject:object];
-                    NSString *itemRendering = [self renderElementsWithContext:innerContext inRootTemplate:rootTemplate];
+                for (id object2 in object) {
+                    GRMustacheContext *innerContext = [renderingContext contextByAddingObject:object2];
+                    NSString *itemRendering = [self renderElementsWithRenderingContext:innerContext filterContext:filterContext delegatingTemplate:delegatingTemplate delegates:innerDelegates];
                     [(NSMutableString *)result appendString:itemRendering];
                 }
             }
         }
-        else if ([value conformsToProtocol:@protocol(GRMustacheHelper)])
+        else if ([object conformsToProtocol:@protocol(GRMustacheHelper)])
         {
             // Helper
             if (!_inverted) {
-                GRMustacheSection *section = [GRMustacheSection sectionWithSectionElement:self renderingContext:context rootTemplate:rootTemplate];
-                result = [[(id<GRMustacheHelper>)value renderSection:section] retain];
+                GRMustacheSection *section = [GRMustacheSection sectionWithSectionElement:self renderingContext:renderingContext filterContext:filterContext delegatingTemplate:delegatingTemplate delegates:innerDelegates];
+                result = [[(id<GRMustacheHelper>)object renderSection:section] retain];
             }
         }
         else
         {
             // True object value
             if (!_inverted) {
-                GRMustacheContext *innerContext = [context contextByAddingObject:value];
-                result = [[self renderElementsWithContext:innerContext inRootTemplate:rootTemplate] retain];
+                GRMustacheContext *innerContext = [renderingContext contextByAddingObject:object];
+                result = [[self renderElementsWithRenderingContext:innerContext filterContext:filterContext delegatingTemplate:delegatingTemplate delegates:innerDelegates] retain];
             }
         }
         
-        
         // finish
         
-        if ([rootTemplate.delegate respondsToSelector:@selector(template:didInterpretReturnValueOfInvocation:as:)]) {
-            // 4.1 API
-            [rootTemplate.delegate template:rootTemplate didInterpretReturnValueOfInvocation:_invocation as:GRMustacheInterpretationSection];
-        } else if ([rootTemplate.delegate respondsToSelector:@selector(template:didRenderReturnValueOfInvocation:)]) {
-            // 4.0 API
-            [rootTemplate.delegate template:rootTemplate didRenderReturnValueOfInvocation:_invocation];
+        if (invocation) {
+            [delegatingTemplate invokeDelegates:delegates didInterpretReturnValueOfInvocation:invocation as:GRMustacheInterpretationSection];
         }
+
     }
     if (!result) {
         return @"";
@@ -200,11 +205,11 @@
 
 #pragma mark Private
 
-- (id)initWithInvocation:(GRMustacheInvocation *)invocation templateString:(NSString *)templateString innerRange:(NSRange)innerRange inverted:(BOOL)inverted elements:(NSArray *)elems
+- (id)initWithExpression:(id<GRMustacheExpression>)expression templateString:(NSString *)templateString innerRange:(NSRange)innerRange inverted:(BOOL)inverted elements:(NSArray *)elems
 {
     self = [self init];
     if (self) {
-        self.invocation = invocation;
+        self.expression = expression;
         self.templateString = templateString;
         self.innerRange = innerRange;
         self.inverted = inverted;

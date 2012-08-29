@@ -23,162 +23,85 @@
 #import "Document.h"
 #import "GRMustache.h"
 
-@interface Document() <GRMustacheTemplateDelegate>
-@property (nonatomic, strong) NSMutableArray *templateNumberFormatterStack;
-@end
-
 @implementation Document
-@synthesize templateNumberFormatterStack=_templateNumberFormatterStack;
 
 - (NSString *)render
 {
     /**
-     * So, our goal is to format all numbers in the `{{#PERCENT_FORMAT}}` and
-     * `{{#DECIMAL_FORMAT}}` sections of template.mustache.
-     * 
-     * First, we attach a NSNumberFormatter instance to those sections. This is
-     * done by setting NSNumberFormatter instances to corresponding keys in the
-     * data object that we will render. We'll use a NSDictionary for storing
-     * the data, but you can use any other KVC-compliant container.
-     * 
-     * The NSNumberFormatter instances will never be rendered: GRMustache
-     * considers them as "true" objects that will trigger the rendering of the
-     * sections they are attached to. We use them as plain sentinels.
+     * Our template wants to render floats in various formats: raw, or formatted
+     * as percentage, or formatted as decimal.
+     *
+     * This is typically a job for filters: we'll define the `percent` and
+     * `decimal` filters.
+     *
+     * For now, we just have our template use them. The initial {{%FILTERS}}
+     * pragma tag tells GRMustache to trigger support for filters, which are an
+     * extension to the Mustache specification.
+     */
+     
+    NSString *templateString = @"{{%FILTERS}}"
+                               @"raw: {{value}}\n"
+                               @"percent: {{percent(value)}}\n"
+                               @"decimal: {{decimal(value)}}";
+    GRMustacheTemplate *template = [GRMustacheTemplate templateFromString:templateString error:NULL];
+    
+    /**
+     * Now we have to define those filters.
+     *
+     * Filters have to be objects that conform to the GRMustacheFilter protocol.
+     * The easiest way to build one is to use the
+     * [GRMustacheFilter filterWithBlock:] method.
+     *
+     * The formatting itself is done by our friend NSNumberFormatter.
      */
     
-    NSMutableDictionary *data = [NSMutableDictionary dictionary];
+    // Build our formatters
     
-    // Attach a percent NSNumberFormatter to the "PERCENT_FORMAT" key
     NSNumberFormatter *percentNumberFormatter = [[NSNumberFormatter alloc] init];
     percentNumberFormatter.numberStyle = kCFNumberFormatterPercentStyle;
-    [data setObject:percentNumberFormatter forKey:@"PERCENT_FORMAT"];
-    
-    // Attach a decimal NSNumberFormatter to the "DECIMAL_FORMAT" key
+
     NSNumberFormatter *decimalNumberFormatter = [[NSNumberFormatter alloc] init];
     decimalNumberFormatter.numberStyle = kCFNumberFormatterDecimalStyle;
-    [data setObject:decimalNumberFormatter forKey:@"DECIMAL_FORMAT"];
+    
+    
+    // Build our filters
+    
+    id percentFilter = [GRMustacheFilter filterWithBlock:^id(id value) {
+        return [percentNumberFormatter stringFromNumber:value];
+    }];
+    
+    id decimalFilter = [GRMustacheFilter filterWithBlock:^id(id value) {
+        return [decimalNumberFormatter stringFromNumber:value];
+    }];
     
     
     /**
-     * Now we need a float to be rendered as the {{float}} tags of our
-     * template.
-     */
-    
-    // Attach a float to the "float" key
-    [data setObject:[NSNumber numberWithFloat:0.5] forKey:@"float"];
-    
-    
-    /**
-     * Render. The formatting of numbers will happen in the
-     * GRMustacheTemplateDelegate methods, hereafter.
-     */
-    
-    NSString *templateString = @"raw: {{float}}\n"
-                               @"{{#PERCENT_FORMAT}}"
-                               @"percent: {{float}}\n"
-                               @"{{/PERCENT_FORMAT}}"
-                               @"{{#DECIMAL_FORMAT}}"
-                               @"decimal: {{float}}\n"
-                               @"{{/DECIMAL_FORMAT}}";
-    GRMustacheTemplate *template = [GRMustacheTemplate templateFromString:templateString error:NULL];
-    template.delegate = self;
-    return [template renderObject:data];
-}
-
-#pragma mark GRMustacheTemplateDelegate
-
-/**
- * This method is called right before the template start rendering.
- */
-- (void)templateWillRender:(GRMustacheTemplate *)template
-{
-    /**
-     * Prepare a stack of NSNumberFormatter objects.
-     * 
-     * Each time we'll enter a section that is attached to a NSNumberFormatter,
-     * we'll enqueue this NSNumberFormatter in the stack. This is done in
-     * [template:willInterpretReturnValueOfInvocation:as:]
-     */
-    self.templateNumberFormatterStack = [NSMutableArray array];
-}
-
-/**
- * This method is called when the template is about to render a tag.
- */
-- (void)template:(GRMustacheTemplate *)template willInterpretReturnValueOfInvocation:(GRMustacheInvocation *)invocation as:(GRMustacheInterpretation)interpretation
-{
-    /**
-     * The invocation object tells us which object is about to be rendered.
+     * GRMustache does not load filters from the rendered data, but from a
+     * specific filters container.
      *
-     * If it is a NSNumberFormatter, enqueue it in templateNumberFormatterStack,
-     * and return.
+     * We'll use a NSDictionary for storing the filters, but you can use any
+     * other KVC-compliant container.
      */
-    if ([invocation.returnValue isKindOfClass:[NSNumberFormatter class]])
-    {
-        [self.templateNumberFormatterStack addObject:invocation.returnValue];
-        return;
-    }
+    
+    NSDictionary *filters = [NSDictionary dictionaryWithObjectsAndKeys:
+                             percentFilter, @"percent",
+                             decimalFilter, @"decimal",
+                             nil];
+    
     
     /**
-     * We actually only format numbers for variable tags such as `{{name}}`. We
-     * must carefully avoid messing with sections: they as well can be provided
-     * with numbers, that they interpret as booleans. We surely do not want to
-     * convert NO to the truthy @"0%" string...
-     * 
-     * So let's ignore sections, and return.
+     * Now we need a float to be rendered as `value` in our template:
      */
-    if (interpretation == GRMustacheInterpretationSection)
-    {
-        return;
-    }
+    
+    NSDictionary *data = [NSDictionary dictionaryWithObject:[NSNumber numberWithFloat:0.5] forKey:@"value"];
+    
     
     /**
-     * If our number formatter stack is empty, we can not format anything: let's
-     * return.
+     * Render.
      */
-    if (self.templateNumberFormatterStack.count == 0)
-    {
-        return;
-    }
     
-    /**
-     * There we are: invocation's return value is a NSNumber, and our
-     * templateNumberFormatterStack is not empty.
-     * 
-     * Let's use the top NSNumberFormatter to format this number, and set the
-     * invocation's returnValue: this is the object that will be rendered.
-     */
-    if ([invocation.returnValue isKindOfClass:[NSNumber class]])
-    {
-        NSNumberFormatter *numberFormatter = self.templateNumberFormatterStack.lastObject;
-        NSNumber *number = invocation.returnValue;
-        invocation.returnValue = [numberFormatter stringFromNumber:number];
-    }
-}
-
-/**
- * This method is called right after the template has rendered a tag.
- */
-- (void)template:(GRMustacheTemplate *)template didInterpretReturnValueOfInvocation:(GRMustacheInvocation *)invocation as:(GRMustacheInterpretation)interpretation
-{
-    /**
-     * Make sure we dequeue NSNumberFormatters when we leave their scope.
-     */
-    if ([invocation.returnValue isKindOfClass:[NSNumberFormatter class]])
-    {
-        [self.templateNumberFormatterStack removeLastObject];
-    }
-}
-
-/**
- * This method is called right after the template has finished rendering.
- */
-- (void)templateDidRender:(GRMustacheTemplate *)template
-{
-    /**
-     * Final cleanup: release the stack created in templateWillRender:
-     */
-    self.templateNumberFormatterStack = nil;
+    return [template renderObject:data withFilters:filters];
 }
 
 @end
+

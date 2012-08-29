@@ -20,9 +20,43 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#define GRMUSTACHE_VERSION_MAX_ALLOWED GRMUSTACHE_VERSION_4_0
-#import "GRMustachePublicAPITest.h"
+#import "GRMustacheImplicitIteratorExpression_private.h"
+#import "GRMustacheContext_private.h"
+#import "GRMustacheInvocation_private.h"
 
-@interface GRMustacheTemplateRepositoryWithPartialsDictionaryTest : GRMustachePublicAPITest
+@implementation GRMustacheImplicitIteratorExpression
+//@synthesize debuggingToken=_debuggingToken;
+
++ (id)expression
+{
+    return [[[self alloc] init] autorelease];
+}
+
+- (void)dealloc
+{
+    // [_debuggingToken release];
+    [super dealloc];
+}
+
+- (BOOL)isEqual:(id<GRMustacheExpression>)expression
+{
+    return [expression isKindOfClass:[GRMustacheImplicitIteratorExpression class]];
+}
+
+
+#pragma mark - GRMustacheExpression
+
+- (id)valueForContext:(GRMustacheContext *)context filterContext:(GRMustacheContext *)filterContext delegatingTemplate:(GRMustacheTemplate *)delegatingTemplate delegates:(NSArray *)delegates invocation:(GRMustacheInvocation **)ioInvocation
+{
+    if (delegates.count > 0) {
+        NSAssert(ioInvocation, @"WTF");
+        *ioInvocation = [[[GRMustacheInvocation alloc] init] autorelease];
+        //  (*ioInvocation).debuggingToken = _debuggingToken;
+        (*ioInvocation).returnValue = context.object;
+        (*ioInvocation).key = @".";
+    }
+    
+    return context.object;
+}
 
 @end

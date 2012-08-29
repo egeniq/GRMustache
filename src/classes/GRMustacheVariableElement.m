@@ -21,55 +21,53 @@
 // THE SOFTWARE.
 
 #import "GRMustacheVariableElement_private.h"
+#import "GRMustacheExpression_private.h"
 #import "GRMustacheInvocation_private.h"
 #import "GRMustacheTemplate_private.h"
 
 @interface GRMustacheVariableElement()
-@property (nonatomic, retain) GRMustacheInvocation *invocation;
+@property (nonatomic, retain) id<GRMustacheExpression> expression;
 @property (nonatomic) BOOL raw;
-- (id)initWithInvocation:(GRMustacheInvocation *)invocation raw:(BOOL)raw;
+- (id)initWithExpression:(id<GRMustacheExpression>)expression raw:(BOOL)raw;
 - (NSString *)htmlEscape:(NSString *)string;
 @end
 
 
 @implementation GRMustacheVariableElement
-@synthesize invocation=_invocation;
+@synthesize expression=_expression;
 @synthesize raw=_raw;
 
-+ (id)variableElementWithInvocation:(GRMustacheInvocation *)invocation raw:(BOOL)raw
++ (id)variableElementWithExpression:(id<GRMustacheExpression>)expression raw:(BOOL)raw
 {
-    return [[[self alloc] initWithInvocation:invocation raw:raw] autorelease];
+    return [[[self alloc] initWithExpression:expression raw:raw] autorelease];
 }
 
 - (void)dealloc
 {
-    [_invocation release];
+    [_expression release];
     [super dealloc];
 }
 
 
 #pragma mark <GRMustacheRenderingElement>
 
-- (NSString *)renderContext:(GRMustacheContext *)context inRootTemplate:(GRMustacheTemplate *)rootTemplate
+- (NSString *)renderRenderingContext:(GRMustacheContext *)renderingContext filterContext:(GRMustacheContext *)filterContext delegatingTemplate:(GRMustacheTemplate *)delegatingTemplate delegates:(NSArray *)delegates
 {
-    // invoke
+    // evaluate
     
-    [_invocation invokeWithContext:context];
-    if ([rootTemplate.delegate respondsToSelector:@selector(template:willInterpretReturnValueOfInvocation:as:)]) {
-        // 4.1 API
-        [rootTemplate.delegate template:rootTemplate willInterpretReturnValueOfInvocation:_invocation as:GRMustacheInterpretationVariable];
-    } else if ([rootTemplate.delegate respondsToSelector:@selector(template:willRenderReturnValueOfInvocation:)]) {
-        // 4.0 API
-        [rootTemplate.delegate template:rootTemplate willRenderReturnValueOfInvocation:_invocation];
+    GRMustacheInvocation *invocation = nil;
+    id object = [_expression valueForContext:renderingContext filterContext:filterContext delegatingTemplate:delegatingTemplate delegates:delegates invocation:&invocation];
+    if (invocation) {
+        [delegatingTemplate invokeDelegates:delegates willInterpretReturnValueOfInvocation:invocation as:GRMustacheInterpretationVariable];
+        object = invocation.returnValue;
     }
-    id value = _invocation.returnValue;
     
     
     // interpret
     
     NSString *result = nil;
-    if (value && (value != [NSNull null])) {
-        result = [value description];
+    if (object && (object != [NSNull null])) {
+        result = [object description];
         if (!_raw) {
             result = [self htmlEscape:result];
         }
@@ -78,12 +76,8 @@
     
     // finish
     
-    if ([rootTemplate.delegate respondsToSelector:@selector(template:didInterpretReturnValueOfInvocation:as:)]) {
-        // 4.1 API
-        [rootTemplate.delegate template:rootTemplate didInterpretReturnValueOfInvocation:_invocation as:GRMustacheInterpretationVariable];
-    } else if ([rootTemplate.delegate respondsToSelector:@selector(template:didRenderReturnValueOfInvocation:)]) {
-        // 4.0 API
-        [rootTemplate.delegate template:rootTemplate didRenderReturnValueOfInvocation:_invocation];
+    if (invocation) {
+        [delegatingTemplate invokeDelegates:delegates didInterpretReturnValueOfInvocation:invocation as:GRMustacheInterpretationVariable];
     }
     
     if (!result) {
@@ -95,11 +89,11 @@
 
 #pragma mark Private
 
-- (id)initWithInvocation:(GRMustacheInvocation *)invocation raw:(BOOL)raw
+- (id)initWithExpression:(id<GRMustacheExpression>)expression raw:(BOOL)raw
 {
     self = [self init];
     if (self) {
-        self.invocation = invocation;
+        self.expression = expression;
         self.raw = raw;
     }
     return self;

@@ -20,11 +20,18 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#import "GRPreventNSUndefinedKeyExceptionAttackTest.h"
+#import "GRMustachePrivateAPITest.h"
 #import "GRMustache_private.h"
 #import "GRMustacheTemplate_private.h"
 #import "GRMustacheContext_private.h"
 #import <CoreData/CoreData.h>
+
+@interface GRPreventNSUndefinedKeyExceptionAttackTest : GRMustachePrivateAPITest {
+    NSManagedObjectModel *_managedObjectModel;
+    NSPersistentStoreCoordinator *_persistentStoreCoordinator;
+    NSManagedObjectContext *_managedObjectContext;
+}
+@end
 
 @interface GRPreventNSUndefinedKeyExceptionAttackTest()
 @property (nonatomic, retain) NSManagedObjectModel *managedObjectModel;

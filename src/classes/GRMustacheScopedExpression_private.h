@@ -20,9 +20,32 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#define GRMUSTACHE_VERSION_MAX_ALLOWED GRMUSTACHE_VERSION_4_0
-#import "GRMustachePublicAPITest.h"
+#import "GRMustacheExpression_private.h"
 
-@interface GRMustacheHelperTest : GRMustachePublicAPITest
+/**
+ * The GRMustacheScopedExpression extracts a key out of a value.
+ *
+ * @see GRMustacheExpression
+ */
+@interface GRMustacheScopedExpression : NSObject<GRMustacheExpression> {
+@private
+    //  GRMustacheToken *_debuggingToken;
+    id<GRMustacheExpression> _baseExpression;
+    NSString *_scopeIdentifier;
+}
 
+/**
+ * Returns a scoped expression, given an expression that returns a value, and
+ * an identifier.
+ *
+ * For instance, the Mustache tag `{{ person.name }}` contains a scoped
+ * expression, whose baseExpression is a GRMustacheIdentifierExpression (for the
+ * identifier `person`), and whose identifier is `name`.
+ *
+ * @param baseExpression   An expression.
+ * @param scopeIdentifier  An identifier.
+ *
+ * @return A GRMustacheScopedExpression.
+ */
++ (id)expressionWithBaseExpression:(id<GRMustacheExpression>)baseExpression scopeIdentifier:(NSString *)scopeIdentifier;
 @end
