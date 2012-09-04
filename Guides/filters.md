@@ -1,4 +1,4 @@
-[up](../../../../GRMustache), [next](delegate.md)
+[up](introduction.md), [next](delegate.md)
 
 Filters
 =======
@@ -8,7 +8,8 @@ Filters
 > The topic of filters is currently under [discussion](http://github.com/mustache/spec/issues/41) with other implementors of Mustache. A detailed explanation of the ideas behind the filtering API described below is available at [WhyMustacheFilters.md](../Articles/WhyMustacheFilters.md).
 
 
-## Overview
+Overview
+--------
 
 You apply a filter just like calling a function, with parentheses:
 
@@ -25,7 +26,8 @@ You apply a filter just like calling a function, with parentheses:
     For brevity's sake, closing section tags can be empty: `{{^ isEmpty(people) }}...{{/}}` is valid.
 
 
-## Standard filters library
+Standard filters library
+------------------------
 
 GRMustache ships with a bunch of already implemented filters:
 
@@ -49,7 +51,9 @@ GRMustache ships with a bunch of already implemented filters:
     
     Given "johannes KEPLER", it returns "JOHANNES KEPLER".
 
-## Defining your own filters
+
+Defining your own filters
+-------------------------
 
 You can implement your own filters with objects that conform to the `GRMustacheFilter` protocol.
 
@@ -94,11 +98,10 @@ Now, let's have GRMustache know about your custom filter, and use it:
 
 ```objc
 // Prepare the data
-float gain = 0.5;
-NSDictionary *data = [NSDictionary dictionaryWithObject:[NSNumber numberWithFloat:gain] forKey:@"gain"];
+id data = @{ @"gain": @0.5 };
 
 // Prepare the filters
-NSDictionary *filters = [NSDictionary dictionaryWithObject:percentFilter forKey:@"percent"];
+id filters = @{ @percent: percentFilter };
 
 // Renders @"Enjoy your 50% productivity bump!"
 NSString *templateString = @"{{%FILTERS}}Enjoy your {{ percent(gain) }} productivity bump!";
@@ -108,16 +111,20 @@ NSString *rendering = [GRMustacheTemplate renderObject:data
                                                  error:NULL];
 ```
 
-## Filters namespaces
+
+Filters namespaces
+------------------
 
 Just as you can provide an object hierarchy for rendered values, and extract `person.pet.name` from it, you can provide filters as an object hierarchy, and "namespace" your filters. For instance, let's declare the `math.abs` filter, and render `{{ math.abs(x) }}`:
 
 ```objc
-id absFilter = [GRMustacheFilter filterWithBlock:^id(id object) {
-    return [NSNumber numberWithInt: abs([object intValue])];
-}];
-NSDictionary *mathFilters = [NSDictionary dictionaryWithObject:absFilter forKey:@"abs"];
-NSDictionary *filters = [NSDictionary dictionaryWithObject:mathFilters forKey:@"math"];
+id filters = @{
+    @"math": @{
+        @"abs": [GRMustacheFilter filterWithBlock:^id(id object) {
+            return @(abs([object intValue]));
+        }]
+    }
+};
 
 [GRMustacheTemplate renderObject:...
                      withFilters:filters
@@ -125,7 +132,9 @@ NSDictionary *filters = [NSDictionary dictionaryWithObject:mathFilters forKey:@"
                            error:NULL];
 ```
 
-## Filters exceptions
+
+Filters exceptions
+------------------
 
 Should a filter be missing, or should the matching object not conform to the GRMustacheFilter protocol, GRMustache will raise an exception of name `GRMustacheFilterException`.
 
@@ -136,4 +145,10 @@ The message describes the exact place where the error occur has occurred:
     Object for key `f` in tag `{{ f(foo) }}` at line 13 of /path/to/template does not conform to GRMustacheFilter protocol: "blah"
 
 
-[up](../../../../GRMustache), [next](delegate.md)
+Sample code
+-----------
+
+Custom filters are the core tool used by the [formatted numbers](sample_code/number_formatting.md) and [collection indexes](sample_code/indexes.md) sample codes. Go check inspiration there.
+
+
+[up](introduction.md), [next](delegate.md)
