@@ -1,4 +1,4 @@
-[up](../../../../GRMustache), [next](runtime/context_stack.md)
+[up](introduction.md), [next](runtime/context_stack.md)
 
 GRMustache runtime
 ==================
@@ -16,12 +16,12 @@ There are only three methods that you have to care about when providing data to 
 For instance, let's consider the following code:
 
 ```obcj
-NSDictionary *dictionary = [NSDictionary dictionaryWithObject:[NSNumber numberWithInt:2] forKey:@"count"];
+NSDictionary *dictionary = @{ @"count": @2 };
 NSString *templateString = @"I have {{count}} arms.";
 NSString *rendering = [GRMustacheTemplate renderObject:dictionary fromString:templateString error:NULL];
 ```
 
-1. When GRMustache renders the `{{count}}` tag, it invokes `valueForKey:` with the key `@"count"` on the dictionary. It gets `[NSNumber numberWithInt:2]` as a result.
+1. When GRMustache renders the `{{count}}` tag, it invokes `valueForKey:` with the key `@"count"` on the dictionary. It gets an NSNumber of value 2 as a result.
 2. The `description` method of the NSNumber returns a string: `@"2"`.
 3. This string is inserted into the rendering: `@"I have 2 arms"`.
 
@@ -43,4 +43,4 @@ Mustache does a little more than rendering plain `{{name}}` tags. Let's review M
     Control whether a Mustache section should render or not.
 
 
-[up](../../../../GRMustache), [next](runtime/context_stack.md)
+[up](introduction.md), [next](runtime/context_stack.md)

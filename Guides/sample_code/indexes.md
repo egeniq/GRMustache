@@ -1,4 +1,4 @@
-[up](../../../../tree/master/Guides/sample_code), [next](../forking.md)
+[up](../../../../tree/master/Guides/sample_code), [next](localization.md)
 
 Indexes
 =======
@@ -18,7 +18,7 @@ GRMustache solution: filters
 
 **[Download the code](../../../../tree/master/Guides/sample_code/indexes)**
 
-The [GRMustacheFilter](../filter.md) protocol can help you extend the mustache language, and avoid preparing your data.
+The [GRMustacheFilter](../filters.md) protocol can help you extend the mustache language, and avoid preparing your data.
 
 **However, it may be tedious or impossible for other Mustache implementations to produce the same rendering.**
 
@@ -124,7 +124,7 @@ We have everything we need to render our template:
      * "withPosition" key, but you can use any other KVC-compliant container.
      */
     
-    NSDictionary *filters = [NSDictionary dictionaryWithObject:positionFilter forKey:@"withPosition"];
+    NSDictionary *filters = @{ @"withPosition": positionFilter };
     
     
     /**
@@ -138,8 +138,7 @@ We have everything we need to render our template:
     Person *alice = [Person personWithName:@"Alice"];
     Person *bob = [Person personWithName:@"Bob"];
     Person *craig = [Person personWithName:@"Craig"];
-    NSArray *people = [NSArray arrayWithObjects: alice, bob, craig, nil];
-    NSDictionary *data = [NSDictionary dictionaryWithObject:people forKey:@"people"];
+    NSDictionary *data = @{ @"people": @[alice, bob, craig] };
     
     
     /**
@@ -300,4 +299,4 @@ And finally, write the PositionFilterItem implementation:
 
 **[Download the code](../../../../tree/master/Guides/sample_code/indexes)**
 
-[up](../../../../tree/master/Guides/sample_code), [next](../forking.md)
+[up](../../../../tree/master/Guides/sample_code), [next](localization.md)

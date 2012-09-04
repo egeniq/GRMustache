@@ -1,4 +1,4 @@
-[up](../../../../GRMustache), [next](runtime.md)
+[up](introduction.md), [next](runtime.md)
 
 Template repositories
 =====================
@@ -110,7 +110,7 @@ Use the following GRMustacheTemplateRepository class method:
 Now we may instanciate one:
     
 ```objc
-NSDictionary *templates = [NSDictionary dictionaryWithObject:@"It works!" forKey:@"partial"];
+NSDictionary *templates = @{ @"partial": @"It works!" }
 GRMustacheTemplateRepository *repository = [GRMustacheTemplateRepository templateRepositoryWithPartialsDictionary:templates];
 ```
 
@@ -218,4 +218,4 @@ GRMustacheTemplateRepository *repository = [GRMustacheTemplateRepository templat
 repository.dataSource = mars;
 ```
 
-[up](../../../../GRMustache), [next](runtime.md)
+[up](introduction.md), [next](runtime.md)

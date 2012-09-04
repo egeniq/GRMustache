@@ -30,7 +30,7 @@
  */
 @interface GRMustacheImplicitIteratorExpression : NSObject<GRMustacheExpression> {
 @private
-    // GRMustacheToken *_debuggingToken;
+    GRMustacheToken *_debuggingToken;
 }
 
 /**
