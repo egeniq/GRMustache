@@ -21,24 +21,16 @@
 // THE SOFTWARE.
 
 #import "GRMustacheImplicitIteratorExpression_private.h"
-#import "GRMustacheContext_private.h"
-#import "GRMustacheInvocation_private.h"
+#import "GRMustacheRuntime_private.h"
 
 @implementation GRMustacheImplicitIteratorExpression
-@synthesize debuggingToken=_debuggingToken;
 
 + (id)expression
 {
     return [[[self alloc] init] autorelease];
 }
 
-- (void)dealloc
-{
-    [_debuggingToken release];
-    [super dealloc];
-}
-
-- (BOOL)isEqual:(id<GRMustacheExpression>)expression
+- (BOOL)isEqual:(id)expression
 {
     return [expression isKindOfClass:[GRMustacheImplicitIteratorExpression class]];
 }
@@ -46,17 +38,10 @@
 
 #pragma mark - GRMustacheExpression
 
-- (id)valueForContext:(GRMustacheContext *)context filterContext:(GRMustacheContext *)filterContext delegatingTemplate:(GRMustacheTemplate *)delegatingTemplate delegates:(NSArray *)delegates invocation:(GRMustacheInvocation **)ioInvocation
+- (id)evaluateInRuntime:(GRMustacheRuntime *)runtime asFilterValue:(BOOL)filterValue
 {
-    if (delegates.count > 0) {
-        NSAssert(ioInvocation, @"WTF");
-        *ioInvocation = [[[GRMustacheInvocation alloc] init] autorelease];
-        (*ioInvocation).debuggingToken = _debuggingToken;
-        (*ioInvocation).returnValue = context.object;
-        (*ioInvocation).key = @".";
-    }
-    
-    return context.object;
+    NSAssert(!filterValue, @"GRMustacheImplicitIteratorExpression invoked for a filter");
+    return [runtime currentContextValue];
 }
 
 @end

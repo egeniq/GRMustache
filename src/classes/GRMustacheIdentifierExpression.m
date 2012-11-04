@@ -21,8 +21,7 @@
 // THE SOFTWARE.
 
 #import "GRMustacheIdentifierExpression_private.h"
-#import "GRMustacheContext_private.h"
-#import "GRMustacheInvocation_private.h"
+#import "GRMustacheRuntime_private.h"
 
 @interface GRMustacheIdentifierExpression()
 @property (nonatomic, copy) NSString *identifier;
@@ -31,7 +30,6 @@
 @end
 
 @implementation GRMustacheIdentifierExpression
-@synthesize debuggingToken=_debuggingToken;
 @synthesize identifier=_identifier;
 
 + (id)expressionWithIdentifier:(NSString *)identifier
@@ -50,12 +48,11 @@
 
 - (void)dealloc
 {
-    [_debuggingToken release];
     [_identifier release];
     [super dealloc];
 }
 
-- (BOOL)isEqual:(id<GRMustacheExpression>)expression
+- (BOOL)isEqual:(id)expression
 {
     if (![expression isKindOfClass:[GRMustacheIdentifierExpression class]]) {
         return NO;
@@ -66,19 +63,13 @@
 
 #pragma mark - GRMustacheExpression
 
-- (id)valueForContext:(GRMustacheContext *)context filterContext:(GRMustacheContext *)filterContext delegatingTemplate:(GRMustacheTemplate *)delegatingTemplate delegates:(NSArray *)delegates invocation:(GRMustacheInvocation **)ioInvocation
+- (id)evaluateInRuntime:(GRMustacheRuntime *)runtime asFilterValue:(BOOL)filterValue
 {
-    id value = [context valueForKey:_identifier];
-    
-    if (delegates.count > 0) {
-        NSAssert(ioInvocation, @"WTF");
-        *ioInvocation = [[[GRMustacheInvocation alloc] init] autorelease];
-        (*ioInvocation).debuggingToken = _debuggingToken;
-        (*ioInvocation).returnValue = value;
-        (*ioInvocation).key = _identifier;
+    if (filterValue) {
+        return [runtime filterValueForKey:_identifier];
+    } else {
+        return [runtime contextValueForKey:_identifier];
     }
-    
-    return value;
 }
 
 @end

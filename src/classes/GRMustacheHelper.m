@@ -27,8 +27,6 @@
 // =============================================================================
 #pragma mark - Private concrete class GRMustacheBlockHelper
 
-#if NS_BLOCKS_AVAILABLE
-
 /**
  * Private subclass of GRMustacheHelper that render sections by calling a block.
  */
@@ -39,22 +37,16 @@
 - (id)initWithBlock:(NSString *(^)(GRMustacheSection* section))block;
 @end
 
-#endif /* if NS_BLOCKS_AVAILABLE */
-
 
 // =============================================================================
 #pragma mark - GRMustacheHelper
 
 @implementation GRMustacheHelper
 
-#if NS_BLOCKS_AVAILABLE
-
 + (id)helperWithBlock:(NSString *(^)(GRMustacheSection* section))block
 {
     return [[[GRMustacheBlockHelper alloc] initWithBlock:block] autorelease];
 }
-
-#endif /* if NS_BLOCKS_AVAILABLE */
 
 #pragma mark <GRMustacheHelper>
 
@@ -68,8 +60,6 @@
 
 // =============================================================================
 #pragma mark - Private concrete class GRMustacheBlockHelper
-
-#if NS_BLOCKS_AVAILABLE
 
 @implementation GRMustacheBlockHelper
 
@@ -93,15 +83,13 @@
 
 - (NSString *)renderSection:(GRMustacheSection *)section
 {
-    NSString *result = nil;
+    NSString *rendering = nil;
     
     if (_block) {
-        result = _block(section);
+        rendering = _block(section);
     }
     
-    return result;
+    return rendering;
 }
 
 @end
-
-#endif /* if NS_BLOCKS_AVAILABLE */

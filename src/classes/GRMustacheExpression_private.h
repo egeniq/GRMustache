@@ -23,12 +23,12 @@
 #import <Foundation/Foundation.h>
 #import "GRMustacheAvailabilityMacros_private.h"
 
-@class GRMustacheContext;
-@class GRMustacheTemplate;
-@class GRMustacheInvocation;
+@class GRMustacheRuntime;
 @class GRMustacheToken;
 
 /**
+ * TODO
+ *
  * The GRMustacheExpression is the protocol for objects that can provide values
  * out of the data provided by the library user.
  *
@@ -40,46 +40,22 @@
  * @see GRMustacheImplicitIteratorExpression
  * @see GRMustacheScopedExpression
  */
-@protocol GRMustacheExpression <NSObject>
-@required
+@interface GRMustacheExpression : NSObject {
+@private
+    GRMustacheToken *_token;
+}
 
 /**
+ * TODO
  * This property stores a token whose sole purpose is to help the library user
  * debugging his templates, using the tokens' ability to output their location
  * (`{{ foo }} at line 23 of /path/to/template`).
- *
- * @see GRMustacheTemplateDelegate
- * @see [GRMustacheInvocation description]
- * @see [GRMustacheToken description]
  */
-@property (nonatomic, retain) GRMustacheToken *debuggingToken;
+@property (nonatomic, retain) GRMustacheToken *token;
 
 /**
- * This method performs three jobs in the same time:
- *
- * 1. Returns the value of the expression, given a context and a filterContext.
- * 2. Invokes delegates' callbacks when appropriate for the actual expression's
- *    class.
- * 3. Processes _ioInvocation_ so that on return it contains, or not, a
- *    GRMustacheInvocation object that would provide a template's delegate
- *    with the information it needs, depending on the actual expression's
- *    class.
- *
- * @param context             A context where to look for identifiers.
- * @param filterContext       A context where to look for filters.
- * @param delegatingTemplate  A template to be used for
- *                            GRMustacheTemplateDelegate callbacks, or nil.
- * @param delegates           An array of GRMustacheTemplateDelegate instances
- *                            whose callbacks should be invoked when
- *                            appropriate, or nil.
- * @param ioInvocation        Contains a pointer to a GRMustacheInvocation, or
- *                            nil. Upon return, contains a GRMustacheInvocation,
- *                            or nil, depending on the expression.
+ * TODO
  */
-- (id)valueForContext:(GRMustacheContext *)context
-        filterContext:(GRMustacheContext *)filterContext
-   delegatingTemplate:(GRMustacheTemplate *)delegatingTemplate
-            delegates:(NSArray *)delegates
-           invocation:(GRMustacheInvocation **)ioInvocation;
+- (id)evaluateInRuntime:(GRMustacheRuntime *)runtime asFilterValue:(BOOL)filterValue;
 
 @end

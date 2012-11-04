@@ -21,14 +21,11 @@
 // THE SOFTWARE.
 
 #import "GRMustacheFilter.h"
-#import "GRMustacheInvocation.h"
 
 NSString * const GRMustacheFilterException = @"GRMustacheFilterException";
 
 // =============================================================================
 #pragma mark - Private concrete class GRMustacheBlockFilter
-
-#if NS_BLOCKS_AVAILABLE
 
 /**
  * Private subclass of GRMustacheFilter that filter values by calling a block.
@@ -40,22 +37,16 @@ NSString * const GRMustacheFilterException = @"GRMustacheFilterException";
 - (id)initWithBlock:(id(^)(id value))block;
 @end
 
-#endif /* if NS_BLOCKS_AVAILABLE */
-
 
 // =============================================================================
 #pragma mark - GRMustacheFilter
 
 @implementation GRMustacheFilter
 
-#if NS_BLOCKS_AVAILABLE
-
 + (id)filterWithBlock:(id(^)(id value))block
 {
     return [[[GRMustacheBlockFilter alloc] initWithBlock:block] autorelease];
 }
-
-#endif /* if NS_BLOCKS_AVAILABLE */
 
 - (id)transformedValue:(id)object
 {
@@ -67,8 +58,6 @@ NSString * const GRMustacheFilterException = @"GRMustacheFilterException";
 
 // =============================================================================
 #pragma mark - Private concrete class GRMustacheBlockFilter
-
-#if NS_BLOCKS_AVAILABLE
 
 @implementation GRMustacheBlockFilter
 
@@ -100,5 +89,3 @@ NSString * const GRMustacheFilterException = @"GRMustacheFilterException";
 }
 
 @end
-
-#endif /* if NS_BLOCKS_AVAILABLE */

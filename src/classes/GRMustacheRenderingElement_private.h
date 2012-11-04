@@ -23,10 +23,11 @@
 #import <Foundation/Foundation.h>
 #import "GRMustacheAvailabilityMacros_private.h"
 
-@class GRMustacheContext;
-@class GRMustacheTemplate;
+@class GRMustacheRuntime;
 
 /**
+ * TODO
+ *
  * The protocol for "rendering elements".
  * 
  * When parsing a Mustache template, GRMustacheCompiler builds a syntax
@@ -36,7 +37,7 @@
  * GRMustacheRenderingElement.
  * 
  * Their responsability is to render the data provided by the library user. This
- * data is encapsulated into GRMustacheContext objects, which represent a
+ * data is encapsulated into GRMustacheRuntime objects, which represent a
  * context stack that grows when entering a Mustache {{#section}}, and shrinks
  * when leaving that same {{/section}}.
  * 
@@ -50,22 +51,23 @@
  *   render the concatenation of their renderings.
  * 
  * @see GRMustacheCompiler
- * @see GRMustacheContext
+ * @see GRMustacheRuntime
  */
 @protocol GRMustacheRenderingElement<NSObject>
 @required
 
 /**
+ * TODO
  * Renders.
  * 
  * @param renderingContext    A rendering context stack.
  * @param filterContext       A filters context stack.
- * @param delegatingTemplate  A template.
+ * @param template            A template.
  * @param delegates           An array of GRMustacheTemplateDelegate objects
  *                            whose callbacks should be called whenever
- *                            relevant, with _delegatingTemplate_ as a template.
+ *                            relevant, with _template_ as a template.
  *
  * @return The rendering.
  */
-- (NSString *)renderRenderingContext:(GRMustacheContext *)renderingContext filterContext:(GRMustacheContext *)filterContext delegatingTemplate:(GRMustacheTemplate *)delegatingTemplate delegates:(NSArray *)delegates GRMUSTACHE_API_INTERNAL;
+- (void)renderInBuffer:(NSMutableString *)buffer withRuntime:(GRMustacheRuntime *)runtime GRMUSTACHE_API_INTERNAL;
 @end

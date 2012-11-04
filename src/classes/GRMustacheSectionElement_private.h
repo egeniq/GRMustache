@@ -23,9 +23,7 @@
 #import "GRMustacheAvailabilityMacros_private.h"
 #import "GRMustacheRenderingElement_private.h"
 
-@protocol GRMustacheExpression;
-@class GRMustacheTemplate;
-@class GRMustacheSection;
+@class GRMustacheExpression;
 
 /**
  * A GRMustacheSectionElement is a rendering element that renders sections
@@ -35,7 +33,7 @@
  */
 @interface GRMustacheSectionElement: NSObject<GRMustacheRenderingElement> {
 @private
-    id<GRMustacheExpression>_expression;
+    GRMustacheExpression *_expression;
     NSString *_templateString;
     NSRange _innerRange;
     BOOL _inverted;
@@ -77,23 +75,24 @@
  * @return A GRMustacheSectionElement
  * 
  * @see GRMustacheExpression
- * @see GRMustacheContext
+ * @see GRMustacheRuntime
  * @see GRMustacheHelper
  */
-+ (id)sectionElementWithExpression:(id<GRMustacheExpression>)expression templateString:(NSString *)templateString innerRange:(NSRange)innerRange inverted:(BOOL)inverted elements:(NSArray *)elems GRMUSTACHE_API_INTERNAL;
++ (id)sectionElementWithExpression:(GRMustacheExpression *)expression templateString:(NSString *)templateString innerRange:(NSRange)innerRange inverted:(BOOL)inverted elements:(NSArray *)elems GRMUSTACHE_API_INTERNAL;
 
 /**
+ * TODO
  * Returns the rendering of inner elements.
  *
  * @param renderingContext    A rendering context stack.
  * @param filterContext       A filters context stack.
- * @param delegatingTemplate  A template.
+ * @param template            A template.
  * @param delegates           An array of GRMustacheTemplateDelegate objects
  *                            whose callbacks should be called whenever
- *                            relevant, with _delegatingTemplate_ as a template.
+ *                            relevant, with _template_ as a template.
  *
  * @return The rendering of inner elements.
  */
-- (NSString *)renderElementsWithRenderingContext:(GRMustacheContext *)renderingContext filterContext:(GRMustacheContext *)filterContext delegatingTemplate:(GRMustacheTemplate *)delegatingTemplate delegates:(NSArray *)delegates GRMUSTACHE_API_INTERNAL;
+- (void)renderInnerElementsInBuffer:(NSMutableString *)buffer withRuntime:(GRMustacheRuntime *)runtime GRMUSTACHE_API_INTERNAL;
 
 @end

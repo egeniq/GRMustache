@@ -21,27 +21,26 @@
 // THE SOFTWARE.
 
 #import "GRMustacheScopedExpression_private.h"
-#import "GRMustacheContext_private.h"
-#import "GRMustacheInvocation_private.h"
+#import "GRMustacheRuntime_private.h"
+#import "GRMustacheRuntime_private.h"
 
 @interface GRMustacheScopedExpression()
-@property (nonatomic, retain) id<GRMustacheExpression> baseExpression;
+@property (nonatomic, retain) GRMustacheExpression *baseExpression;
 @property (nonatomic, copy) NSString *scopeIdentifier;
 
-- (id)initWithBaseExpression:(id<GRMustacheExpression>)baseExpression scopeIdentifier:(NSString *)scopeIdentifier;
+- (id)initWithBaseExpression:(GRMustacheExpression *)baseExpression scopeIdentifier:(NSString *)scopeIdentifier;
 @end
 
 @implementation GRMustacheScopedExpression
-@synthesize debuggingToken=_debuggingToken;
 @synthesize baseExpression=_baseExpression;
 @synthesize scopeIdentifier=_scopeIdentifier;
 
-+ (id)expressionWithBaseExpression:(id<GRMustacheExpression>)baseExpression scopeIdentifier:(NSString *)scopeIdentifier
++ (id)expressionWithBaseExpression:(GRMustacheExpression *)baseExpression scopeIdentifier:(NSString *)scopeIdentifier
 {
     return [[[self alloc] initWithBaseExpression:baseExpression scopeIdentifier:scopeIdentifier] autorelease];
 }
 
-- (id)initWithBaseExpression:(id<GRMustacheExpression>)baseExpression scopeIdentifier:(NSString *)scopeIdentifier
+- (id)initWithBaseExpression:(GRMustacheExpression *)baseExpression scopeIdentifier:(NSString *)scopeIdentifier
 {
     self = [super init];
     if (self) {
@@ -53,22 +52,18 @@
 
 - (void)dealloc
 {
-    [_debuggingToken release];
     [_baseExpression release];
     [_scopeIdentifier release];
     [super dealloc];
 }
 
-- (void)setDebuggingToken:(GRMustacheToken *)debuggingToken
+- (void)setToken:(GRMustacheToken *)token
 {
-    if (_debuggingToken != debuggingToken) {
-        [_debuggingToken release];
-        _debuggingToken = [debuggingToken retain];
-        _baseExpression.debuggingToken = _debuggingToken;
-    }
+    [super setToken:token];
+    _baseExpression.token = token;
 }
 
-- (BOOL)isEqual:(id<GRMustacheExpression>)expression
+- (BOOL)isEqual:(id)expression
 {
     if (![expression isKindOfClass:[GRMustacheScopedExpression class]]) {
         return NO;
@@ -82,23 +77,10 @@
 
 #pragma mark - GRMustacheExpression
 
-- (id)valueForContext:(GRMustacheContext *)context filterContext:(GRMustacheContext *)filterContext delegatingTemplate:(GRMustacheTemplate *)delegatingTemplate delegates:(NSArray *)delegates invocation:(GRMustacheInvocation **)ioInvocation
+- (id)evaluateInRuntime:(GRMustacheRuntime *)runtime asFilterValue:(BOOL)filterValue
 {
-    id returnValue = nil;
-    id scopedValue = [_baseExpression valueForContext:context filterContext:filterContext delegatingTemplate:delegatingTemplate delegates:delegates invocation:ioInvocation];
-    if (scopedValue) {
-        returnValue = [GRMustacheContext valueForKey:_scopeIdentifier inObject:scopedValue];
-        if (delegates.count > 0) {
-            NSAssert(ioInvocation, @"WTF");
-            if (*ioInvocation == nil) { // it is nil if we are scoping the result of a filter: f(x).y
-                *ioInvocation = [[[GRMustacheInvocation alloc] init] autorelease];
-                (*ioInvocation).debuggingToken = _debuggingToken;
-            }
-            (*ioInvocation).returnValue = returnValue;
-            (*ioInvocation).key = _scopeIdentifier;
-        }
-    }
-    return returnValue;
+    id scopedValue = [_baseExpression evaluateInRuntime:runtime asFilterValue:filterValue];
+    return [GRMustacheRuntime valueForKey:_scopeIdentifier inObject:scopedValue];
 }
 
 @end

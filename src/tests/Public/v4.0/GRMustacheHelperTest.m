@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#define GRMUSTACHE_VERSION_MAX_ALLOWED GRMUSTACHE_VERSION_4_0
+#define GRMUSTACHE_VERSION_MAX_ALLOWED GRMUSTACHE_VERSION_5_0
 #import "GRMustachePublicAPITest.h"
 
 @interface GRMustacheHelperTest : GRMustachePublicAPITest
@@ -71,25 +71,6 @@
     self.lastInnerTemplateString = section.innerTemplateString;
     self.lastRenderedContent = [section render];
     return self.lastRenderedContent;
-}
-@end
-
-@interface GRMustacheTemplateHelper : NSObject<GRMustacheHelper> {
-    NSString *_templateString;
-}
-@property (nonatomic, copy) NSString *templateString;
-@end
-
-@implementation GRMustacheTemplateHelper
-@synthesize templateString=_templateString;
-- (void)dealloc
-{
-    self.templateString = nil;
-    [super dealloc];
-}
-- (NSString *)renderSection:(GRMustacheSection *)section
-{
-    return [GRMustacheTemplate renderObject:section.renderingContext fromString:self.templateString error:NULL];
 }
 @end
 
@@ -213,33 +194,6 @@
         [GRMustacheTemplate renderObject:context fromString:@"{{#helper}}{{subject}}==={{subject}}{{/helper}}" error:nil];
         STAssertEqualObjects(lastRenderedContent, @"---===---", @"");
         [lastRenderedContent release];
-    }
-}
-
-- (void)testHelperCanRenderCurrentContextInDistinctTemplate
-{
-    // This test is against Mustache spec lambda definition, which do not have access to the current rendering context.
-    
-    {
-        // GRMustacheHelper protocol
-        GRMustacheTemplateHelper *helper = [[[GRMustacheTemplateHelper alloc] init] autorelease];
-        helper.templateString = @"{{subject}}";
-        NSDictionary *context = [NSDictionary dictionaryWithObjectsAndKeys:
-                                 helper, @"helper",
-                                 @"---", @"subject", nil];
-        NSString *result = [GRMustacheTemplate renderObject:context fromString:@"{{#helper}}{{/helper}}" error:nil];
-        STAssertEqualObjects(result, @"---", @"");
-    }
-    {
-        // [GRMustacheHelper helperWithBlock:]
-        id helper = [GRMustacheHelper helperWithBlock:^NSString *(GRMustacheSection *section) {
-            return [GRMustacheTemplate renderObject:section.renderingContext fromString:@"{{subject}}" error:NULL];
-        }];
-        NSDictionary *context = [NSDictionary dictionaryWithObjectsAndKeys:
-                                 helper, @"helper",
-                                 @"---", @"subject", nil];
-        NSString *result = [GRMustacheTemplate renderObject:context fromString:@"{{#helper}}{{/helper}}" error:nil];
-        STAssertEqualObjects(result, @"---", @"");
     }
 }
 

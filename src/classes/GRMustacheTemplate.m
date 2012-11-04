@@ -21,9 +21,8 @@
 // THE SOFTWARE.
 
 #import "GRMustacheTemplate_private.h"
-#import "GRMustacheContext_private.h"
+#import "GRMustacheRuntime_private.h"
 #import "GRMustacheTemplateRepository_private.h"
-#import "GRMustacheFilterLibrary_private.h"
 
 @interface GRMustacheTemplate()
 - (id)initWithElements:(NSArray *)elems;
@@ -91,16 +90,16 @@
 
 + (NSString *)renderObject:(id)object withFilters:(id)filters fromString:(NSString *)templateString error:(NSError **)outError
 {
-    NSString *result;
+    NSString *rendering;
     GRMustacheTemplate *template;
     @autoreleasepool {
         template = [GRMustacheTemplate templateFromString:templateString error:outError];
-        result = [[template renderObject:object withFilters:filters] retain];
+        rendering = [[template renderObject:object withFilters:filters] retain];
         // make sure outError is not released by autoreleasepool
         if (!template && outError != NULL) [*outError retain];
     }
     if (!template && outError != NULL) [*outError autorelease];
-    return [result autorelease];
+    return [rendering autorelease];
 }
 
 #if !TARGET_OS_IPHONE || __IPHONE_OS_VERSION_MAX_ALLOWED >= 40000
@@ -112,16 +111,16 @@
 
 + (NSString *)renderObject:(id)object withFilters:(id)filters fromContentsOfURL:(NSURL *)URL error:(NSError **)outError
 {
-    NSString *result;
+    NSString *rendering;
     GRMustacheTemplate *template;
     @autoreleasepool {
         template = [GRMustacheTemplate templateFromContentsOfURL:URL error:outError];
-        result = [[template renderObject:object withFilters:filters] retain];
+        rendering = [[template renderObject:object withFilters:filters] retain];
         // make sure outError is not released by autoreleasepool
         if (!template && outError != NULL) [*outError retain];
     }
     if (!template && outError != NULL) [*outError autorelease];
-    return [result autorelease];
+    return [rendering autorelease];
 }
 
 #endif /* if !TARGET_OS_IPHONE || __IPHONE_OS_VERSION_MAX_ALLOWED >= 40000 */
@@ -133,16 +132,16 @@
 
 + (NSString *)renderObject:(id)object withFilters:(id)filters fromContentsOfFile:(NSString *)path error:(NSError **)outError
 {
-    NSString *result;
+    NSString *rendering;
     GRMustacheTemplate *template;
     @autoreleasepool {
         template = [GRMustacheTemplate templateFromContentsOfFile:path error:outError];
-        result = [[template renderObject:object withFilters:filters] retain];
+        rendering = [[template renderObject:object withFilters:filters] retain];
         // make sure outError is not released by autoreleasepool
         if (!template && outError != NULL) [*outError retain];
     }
     if (!template && outError != NULL) [*outError autorelease];
-    return [result autorelease];
+    return [rendering autorelease];
 }
 
 + (NSString *)renderObject:(id)object fromResource:(NSString *)name bundle:(NSBundle *)bundle error:(NSError **)outError
@@ -152,16 +151,16 @@
 
 + (NSString *)renderObject:(id)object withFilters:(id)filters fromResource:(NSString *)name bundle:(NSBundle *)bundle error:(NSError **)outError
 {
-    NSString *result;
+    NSString *rendering;
     GRMustacheTemplate *template;
     @autoreleasepool {
         template = [GRMustacheTemplate templateFromResource:name bundle:bundle error:outError];
-        result = [[template renderObject:object withFilters:filters] retain];
+        rendering = [[template renderObject:object withFilters:filters] retain];
         // make sure outError is not released by autoreleasepool
         if (!template && outError != NULL) [*outError retain];
     }
     if (!template && outError != NULL) [*outError autorelease];
-    return [result autorelease];
+    return [rendering autorelease];
 }
 
 + (NSString *)renderObject:(id)object fromResource:(NSString *)name withExtension:(NSString *)ext bundle:(NSBundle *)bundle error:(NSError **)outError
@@ -171,16 +170,16 @@
 
 + (NSString *)renderObject:(id)object withFilters:(id)filters fromResource:(NSString *)name withExtension:(NSString *)ext bundle:(NSBundle *)bundle error:(NSError **)outError
 {
-    NSString *result;
+    NSString *rendering;
     GRMustacheTemplate *template;
     @autoreleasepool {
         template = [GRMustacheTemplate templateFromResource:name withExtension:ext bundle:bundle error:outError];
-        result = [[template renderObject:object withFilters:filters] retain];
+        rendering = [[template renderObject:object withFilters:filters] retain];
         // make sure outError is not released by autoreleasepool
         if (!template && outError != NULL) [*outError retain];
     }
     if (!template && outError != NULL) [*outError autorelease];
-    return [result autorelease];
+    return [rendering autorelease];
 }
 
 - (NSString *)render
@@ -195,14 +194,11 @@
 
 - (NSString *)renderObject:(id)object withFilters:(id)filters
 {
-    NSString *result;
-    @autoreleasepool {
-        NSArray *delegates = _delegate ? [NSArray arrayWithObject:_delegate] : nil;
-        GRMustacheContext *renderingContext = [GRMustacheContext contextWithObject:object];
-        GRMustacheContext *filterContext = [GRMustacheFilterLibrary filterContextWithFilters:filters];
-        result = [[self renderRenderingContext:renderingContext filterContext:filterContext delegatingTemplate:self delegates:delegates] retain];
-    }
-    return [result autorelease];
+    NSMutableString *buffer = [NSMutableString string];
+    GRMustacheRuntime *runtime = [GRMustacheRuntime runtimeWithTemplate:self contextObject:object];
+    runtime = [runtime runtimeByAddingFilterObject:filters];
+    [self renderInBuffer:buffer withRuntime:runtime];
+    return buffer;
 }
 
 - (NSString *)renderObjectsInArray:(NSArray *)objects
@@ -212,79 +208,29 @@
 
 - (NSString *)renderObjectsInArray:(NSArray *)objects withFilters:(id)filters
 {
-    NSString *result;
-    @autoreleasepool {
-        GRMustacheContext *renderingContext = nil;
-        for (id object in objects) {
-            renderingContext = renderingContext ? [renderingContext contextByAddingObject:object] : [GRMustacheContext contextWithObject:object];
-        }
-        GRMustacheContext *filterContext = [GRMustacheFilterLibrary filterContextWithFilters:filters];
-        NSArray *delegates = _delegate ? [NSArray arrayWithObject:_delegate] : nil;
-        result = [[self renderRenderingContext:renderingContext filterContext:filterContext delegatingTemplate:self delegates:delegates] retain];
-    }
-    return [result autorelease];
-}
-
-- (NSString *)renderObjects:(id)object, ...
-{
-    NSString *result;
-    @autoreleasepool {
-        va_list objectList;
-        va_start(objectList, object);
-        GRMustacheContext *renderingContext = [GRMustacheContext contextWithObject:object andObjectList:objectList];
-        va_end(objectList);
-        NSArray *delegates = _delegate ? [NSArray arrayWithObject:_delegate] : nil;
-        result = [[self renderRenderingContext:renderingContext filterContext:nil delegatingTemplate:self delegates:delegates] retain];
-    }
-    return [result autorelease];
-}
-
-- (void)invokeDelegates:(NSArray *)delegates willInterpretReturnValueOfInvocation:(GRMustacheInvocation *)invocation as:(GRMustacheInterpretation)interpretation
-{
-    for (id<GRMustacheTemplateDelegate> delegate in delegates) {
-        if ([delegate respondsToSelector:@selector(template:willInterpretReturnValueOfInvocation:as:)]) {
-            // 4.1 API
-            [delegate template:self willInterpretReturnValueOfInvocation:invocation as:interpretation];
-        } else if ([delegate respondsToSelector:@selector(template:willRenderReturnValueOfInvocation:)]) {
-            // 4.0 API
-            [delegate template:self willRenderReturnValueOfInvocation:invocation];
-        }
-    }
-}
-
-- (void)invokeDelegates:(NSArray *)delegates didInterpretReturnValueOfInvocation:(GRMustacheInvocation *)invocation as:(GRMustacheInterpretation)interpretation
-{
-    for (id<GRMustacheTemplateDelegate> delegate in delegates) {
-        if ([delegate respondsToSelector:@selector(template:didInterpretReturnValueOfInvocation:as:)]) {
-            // 4.1 API
-            [delegate template:self didInterpretReturnValueOfInvocation:invocation as:interpretation];
-        } else if ([delegate respondsToSelector:@selector(template:didRenderReturnValueOfInvocation:)]) {
-            // 4.0 API
-            [delegate template:self didRenderReturnValueOfInvocation:invocation];
-        }
-    }
+    NSMutableString *buffer = [NSMutableString string];
+    GRMustacheRuntime *runtime = [GRMustacheRuntime runtimeWithTemplate:self contextObjects:objects];
+    runtime = [runtime runtimeByAddingFilterObject:filters];
+    [self renderInBuffer:buffer withRuntime:runtime];
+    return buffer;
 }
 
 
 #pragma mark <GRMustacheRenderingElement>
 
-- (NSString *)renderRenderingContext:(GRMustacheContext *)renderingContext filterContext:(GRMustacheContext *)filterContext delegatingTemplate:(GRMustacheTemplate *)delegatingTemplate delegates:(NSArray *)delegates
+- (void)renderInBuffer:(NSMutableString *)buffer withRuntime:(GRMustacheRuntime *)runtime
 {
-    NSMutableString *result = [NSMutableString stringWithCapacity:1024];    // allocate 1Kb
-    @autoreleasepool {
-        if ([_delegate respondsToSelector:@selector(templateWillRender:)]) {
-            [_delegate templateWillRender:self];
-        }
-        
-        for (id<GRMustacheRenderingElement> elem in _elems) {
-            [result appendString:[elem renderRenderingContext:renderingContext filterContext:filterContext delegatingTemplate:delegatingTemplate delegates:delegates]];
-        }
-        
-        if ([_delegate respondsToSelector:@selector(templateDidRender:)]) {
-            [_delegate templateDidRender:self];
-        }
+    if ([_delegate respondsToSelector:@selector(templateWillRender:)]) {
+        [_delegate templateWillRender:self];
     }
-    return result;
+    
+    for (id<GRMustacheRenderingElement> elem in _elems) {
+        [elem renderInBuffer:buffer withRuntime:runtime];
+    }
+    
+    if ([_delegate respondsToSelector:@selector(templateDidRender:)]) {
+        [_delegate templateDidRender:self];
+    }
 }
 
 

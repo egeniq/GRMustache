@@ -45,15 +45,16 @@
 
 #pragma mark <GRMustacheRenderingElement>
 
-- (NSString *)renderRenderingContext:(GRMustacheContext *)renderingContext filterContext:(GRMustacheContext *)filterContext delegatingTemplate:(GRMustacheTemplate *)delegatingTemplate delegates:(NSArray *)delegates
+- (void)renderInBuffer:(NSMutableString *)buffer withRuntime:(GRMustacheRuntime *)runtime
 {
-    return _text;
+    [buffer appendString:_text];
 }
 
 #pragma mark Private
 
 - (id)initWithString:(NSString *)text
 {
+    NSAssert(text, @"WTF");
     self = [self init];
     if (self) {
         self.text = text;

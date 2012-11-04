@@ -37,16 +37,6 @@
 // Documented in GRMustacheTemplate.h
 @property (nonatomic, assign) id<GRMustacheTemplateDelegate> delegate GRMUSTACHE_API_PUBLIC;
 
-/**
- * Convenience method for invoking several delegate callbacks in a single method call.
- */
-- (void)invokeDelegates:(NSArray *)delegates willInterpretReturnValueOfInvocation:(GRMustacheInvocation *)invocation as:(GRMustacheInterpretation)interpretation GRMUSTACHE_API_INTERNAL;
-
-/**
- * Convenience method for invoking several delegate callbacks in a single method call.
- */
-- (void)invokeDelegates:(NSArray *)delegates didInterpretReturnValueOfInvocation:(GRMustacheInvocation *)invocation as:(GRMustacheInterpretation)interpretation GRMUSTACHE_API_INTERNAL;
-
 
 #pragma mark Template elements
 
@@ -142,9 +132,6 @@
 
 // Documented in GRMustacheTemplate.h
 - (NSString *)renderObjectsInArray:(NSArray *)objects withFilters:(id)filters GRMUSTACHE_API_PUBLIC;
-
-// Documented in GRMustacheTemplate.h
-- (NSString *)renderObjects:(id)object, ... __attribute__ ((sentinel)) GRMUSTACHE_API_PUBLIC_BUT_DEPRECATED;
 
 // Documented in GRMustacheTemplate.h
 - (NSString *)render GRMUSTACHE_API_PUBLIC;

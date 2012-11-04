@@ -22,13 +22,13 @@
 
 #import "GRMustacheVariableElement_private.h"
 #import "GRMustacheExpression_private.h"
-#import "GRMustacheInvocation_private.h"
 #import "GRMustacheTemplate_private.h"
+#import "GRMustacheRuntime_private.h"
 
 @interface GRMustacheVariableElement()
-@property (nonatomic, retain) id<GRMustacheExpression> expression;
+@property (nonatomic, retain) GRMustacheExpression *expression;
 @property (nonatomic) BOOL raw;
-- (id)initWithExpression:(id<GRMustacheExpression>)expression raw:(BOOL)raw;
+- (id)initWithExpression:(GRMustacheExpression *)expression raw:(BOOL)raw;
 - (NSString *)htmlEscape:(NSString *)string;
 @end
 
@@ -37,7 +37,7 @@
 @synthesize expression=_expression;
 @synthesize raw=_raw;
 
-+ (id)variableElementWithExpression:(id<GRMustacheExpression>)expression raw:(BOOL)raw
++ (id)variableElementWithExpression:(GRMustacheExpression *)expression raw:(BOOL)raw
 {
     return [[[self alloc] initWithExpression:expression raw:raw] autorelease];
 }
@@ -51,45 +51,28 @@
 
 #pragma mark <GRMustacheRenderingElement>
 
-- (NSString *)renderRenderingContext:(GRMustacheContext *)renderingContext filterContext:(GRMustacheContext *)filterContext delegatingTemplate:(GRMustacheTemplate *)delegatingTemplate delegates:(NSArray *)delegates
+- (void)renderInBuffer:(NSMutableString *)buffer withRuntime:(GRMustacheRuntime *)runtime
 {
-    // evaluate
-    
-    GRMustacheInvocation *invocation = nil;
-    id object = [_expression valueForContext:renderingContext filterContext:filterContext delegatingTemplate:delegatingTemplate delegates:delegates invocation:&invocation];
-    if (invocation) {
-        [delegatingTemplate invokeDelegates:delegates willInterpretReturnValueOfInvocation:invocation as:GRMustacheInterpretationVariable];
-        object = invocation.returnValue;
-    }
-    
-    
-    // interpret
-    
-    NSString *result = nil;
-    if (object && (object != [NSNull null])) {
-        result = [object description];
-        if (!_raw) {
-            result = [self htmlEscape:result];
+    id value = [_expression evaluateInRuntime:runtime asFilterValue:NO];
+    [runtime delegateValue:value fromToken:_expression.token interpretation:GRMustacheInterpretationVariable usingBlock:^(id value) {
+        
+        if ((value == nil) || (value == [NSNull null])) {
+            return;
         }
-    }
-    
-    
-    // finish
-    
-    if (invocation) {
-        [delegatingTemplate invokeDelegates:delegates didInterpretReturnValueOfInvocation:invocation as:GRMustacheInterpretationVariable];
-    }
-    
-    if (!result) {
-        return @"";
-    }
-    return result;
+        
+        NSString *rendering = [value description];
+        if (!_raw) {
+            rendering = [self htmlEscape:rendering];
+        }
+        [buffer appendString:rendering];
+        
+    }];
 }
 
 
 #pragma mark Private
 
-- (id)initWithExpression:(id<GRMustacheExpression>)expression raw:(BOOL)raw
+- (id)initWithExpression:(GRMustacheExpression *)expression raw:(BOOL)raw
 {
     self = [self init];
     if (self) {

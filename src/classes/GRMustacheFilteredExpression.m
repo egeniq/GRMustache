@@ -23,25 +23,24 @@
 #import "GRMustacheFilteredExpression_private.h"
 #import "GRMustacheFilter.h"
 #import "GRMustacheTemplate_private.h"
-#import "GRMustacheInvocation_private.h"
+#import "GRMustacheRuntime_private.h"
 
 @interface GRMustacheFilteredExpression()
-@property (nonatomic, retain) id<GRMustacheExpression> filterExpression;
-@property (nonatomic, retain) id<GRMustacheExpression> parameterExpression;
-- (id)initWithFilterExpression:(id<GRMustacheExpression>)filterExpression parameterExpression:(id<GRMustacheExpression>)parameterExpression;
+@property (nonatomic, retain) GRMustacheExpression *filterExpression;
+@property (nonatomic, retain) GRMustacheExpression *parameterExpression;
+- (id)initWithFilterExpression:(GRMustacheExpression *)filterExpression parameterExpression:(GRMustacheExpression *)parameterExpression;
 @end
 
 @implementation GRMustacheFilteredExpression
-@synthesize debuggingToken=_debuggingToken;
 @synthesize filterExpression=_filterExpression;
 @synthesize parameterExpression=_parameterExpression;
 
-+ (id)expressionWithFilterExpression:(id<GRMustacheExpression>)filterExpression parameterExpression:(id<GRMustacheExpression>)parameterExpression
++ (id)expressionWithFilterExpression:(GRMustacheExpression *)filterExpression parameterExpression:(GRMustacheExpression *)parameterExpression
 {
     return [[[self alloc] initWithFilterExpression:filterExpression parameterExpression:parameterExpression] autorelease];
 }
 
-- (id)initWithFilterExpression:(id<GRMustacheExpression>)filterExpression parameterExpression:(id<GRMustacheExpression>)parameterExpression
+- (id)initWithFilterExpression:(GRMustacheExpression *)filterExpression parameterExpression:(GRMustacheExpression *)parameterExpression
 {
     self = [super init];
     if (self) {
@@ -53,23 +52,19 @@
 
 - (void)dealloc
 {
-    [_debuggingToken release];
     [_filterExpression release];
     [_parameterExpression release];
     [super dealloc];
 }
 
-- (void)setDebuggingToken:(GRMustacheToken *)debuggingToken
+- (void)setToken:(GRMustacheToken *)token
 {
-    if (_debuggingToken != debuggingToken) {
-        [_debuggingToken release];
-        _debuggingToken = [debuggingToken retain];
-        _filterExpression.debuggingToken = _debuggingToken;
-        _parameterExpression.debuggingToken = _debuggingToken;
-    }
+    [super setToken:token];
+    _filterExpression.token = token;
+    _parameterExpression.token = token;
 }
 
-- (BOOL)isEqual:(id<GRMustacheExpression>)expression
+- (BOOL)isEqual:(id)expression
 {
     if (![expression isKindOfClass:[GRMustacheFilteredExpression class]]) {
         return NO;
@@ -83,23 +78,11 @@
 
 #pragma mark GRMustacheExpression
 
-- (id)valueForContext:(GRMustacheContext *)context filterContext:(GRMustacheContext *)filterContext delegatingTemplate:(GRMustacheTemplate *)delegatingTemplate delegates:(NSArray *)delegates invocation:(GRMustacheInvocation **)ioInvocation
+- (id)evaluateInRuntime:(GRMustacheRuntime *)runtime asFilterValue:(BOOL)filterValue
 {
-    id parameter = nil;
-    GRMustacheInvocation *invocation = nil;
-    if (delegates.count > 0) {
-        parameter = [_parameterExpression valueForContext:context filterContext:filterContext delegatingTemplate:delegatingTemplate delegates:delegates invocation:&invocation];
-        if (invocation) {
-            [delegatingTemplate invokeDelegates:delegates willInterpretReturnValueOfInvocation:invocation as:GRMustacheInterpretationFilterArgument];
-            parameter = invocation.returnValue;
-            [delegatingTemplate invokeDelegates:delegates didInterpretReturnValueOfInvocation:invocation as:GRMustacheInterpretationFilterArgument];
-        }
-    } else {
-        parameter = [_parameterExpression valueForContext:context filterContext:filterContext delegatingTemplate:delegatingTemplate delegates:delegates invocation:NULL];
-    }
-    
-    id<GRMustacheFilter> filter = [_filterExpression valueForContext:filterContext filterContext:nil delegatingTemplate:nil delegates:nil invocation:NULL];
-    
+    id parameter = [_parameterExpression evaluateInRuntime:runtime asFilterValue:NO];
+    id filter = [_filterExpression evaluateInRuntime:runtime asFilterValue:YES];
+
     if (filter == nil) {
         [NSException raise:GRMustacheFilterException format:@"Missing filter"];
     }
@@ -108,12 +91,7 @@
         [NSException raise:GRMustacheFilterException format:@"Object does not conform to GRMustacheFilter protocol"];
     }
     
-    if (ioInvocation) {
-        // no invocation to return
-        *ioInvocation = nil;
-    }
-    
-    return [filter transformedValue:parameter];
+    return [(id<GRMustacheFilter>)filter transformedValue:parameter];
 }
 
 @end
