@@ -1,4 +1,4 @@
-[up](introduction.md)
+[up](../../../../GRMustache#documentation)
 
 # Forking GRMustache
 
@@ -8,28 +8,30 @@ You'll find below some useful information on each of those topics.
 
 ## Change GRMustache
 
-### Classes in a glance
+### Classes at a glance
 
 The library features are described in the [guides](introduction.md). This section describes the classes that implement those features. They are organized in a few big domains:
 
 - **Parsing**
     - `GRMustacheTemplateRepository`
-    - `GRMustacheTemplateRepositoryDataSource`
-    - `GRMustacheParser`
-    - `GRMustacheToken`
-    - `GRMustacheExpression`
-    - `GRMustacheFilteredExpression`
-    - `GRMustacheIdentifierExpression`
-    - `GRMustacheImplicitIteratorExpression`
-    - `GRMustacheScopedExpression`
+    - `<GRMustacheTemplateRepositoryDataSource>` (protocol)
     
     *Template repositories* are objects that load template strings from various sources.
     
     GRMustache ships with various template repositories that are able to load templates from the file system, and from a dictionary of template strings. The library user can also provide a *data source* to a template repository, in order to load template strings from unimagined locations.
     
+    - `GRMustacheParser`
+    - `GRMustacheToken`
+    
     The *parser* is able to produce a [parse tree](http://en.wikipedia.org/wiki/Parse_tree) of *tokens* out of a template string.
     
     For instance, a parser generates three tokens from `Hello {{name}}!`: two text tokens and a variable token.
+    
+    - `GRMustacheExpression`
+    - `GRMustacheFilteredExpression`
+    - `GRMustacheIdentifierExpression`
+    - `GRMustacheImplicitIteratorExpression`
+    - `GRMustacheScopedExpression`
     
     Some tokens contain an *expression*. Expressions will go live during the rendering of a template (see below), being able to compute rendered values:
     
@@ -39,61 +41,64 @@ The library features are described in the [guides](introduction.md). This sectio
     - `{{ uppercase(name) }}` contains a *filtered expression*.
 
 - **Compiling**
+    - `GRMustacheConfiguration`
     - `GRMustacheCompiler`
-    - `GRMustacheRenderingElement`
-    - `GRMustacheSectionElement`
-    - `GRMustacheTemplate`
-    - `GRMustacheTextElement`
-    - `GRMustacheVariableElement`
+    - `GRMustacheAST`
+    - `<GRMustacheTemplateComponent>` (protocol)
     
-    The *compiler* consumes a parse tree of tokens and outputs an [abstract syntax tree](http://en.wikipedia.org/wiki/Abstract_syntax_tree) of *rendering elements*.
+    The *compiler* consumes a parse tree of tokens and outputs an *AST* ([abstract syntax tree](http://en.wikipedia.org/wiki/Abstract_syntax_tree)) of *template components*. The *configuration* tells the compiler whether the AST should represent a HTML or a text template.
     
-    Rendering elements are actually able to provide the rendering expected by the library user. *Templates* render full templates and partials, *section elements* render Mustache sections, *text elements* render raw text, and *variable elements* perform variable substitution.
-    
-    For instance, from the tokens parsed from `Hello {{name}}!`, a compiler outputs an AST made of one template containing two text elements and a variable element.
+    Template components are actually able to provide the rendering expected by the library user:
 
-- **Runtime contexts**
+    - `GRMustacheTemplate`
+    - `GRMustacheTemplateOverride`
+    - `GRMustacheTextComponent`
+    - `GRMustacheTag`
+    
+    *Templates* render full templates and partials, *tags* render user data, *text elements* render raw text, and *template overrides* render overridable partial tags.
+    
+    For instance, from the tokens parsed from `Hello {{name}}!`, a compiler outputs an AST made of two text elements and a tag element.
+    
+    There are three subclasses of GRMustacheTag:
+    
+    - `GRMustacheSectionTag`
+    - `GRMustacheVariableTag`
+    - `GRMustacheAccumulatorTag`
+    
+    *Section tags* and *Variable tags* represent their "physical" counterpart `{{#^$ name}}...{{/name}}` and `{{name}}` respectively.
+    
+    *Accumulator tags* are actually created during the rendering, not during the compilation phase. They are involved in the concatenation of multiple overridable sections `{{$name}}...{{/name}}`.
+
+- **Runtime**
     - `GRMustacheContext`
     
-    During a template rendering, a *context* implements a state of the context stack that is initialized with the initial object that the library user provides in order to "fill" the template, extends when entering sections, and shrinks when leaving those.
+    A *rendering context* implements a state of four different stacks:
     
-    A context is able to provide the value for an identifier such as `name` found in a `{{name}}` tag.
+    - a *context stack*.
+    - a *protected context stack*.
+    - a *tag delegate stack*.
+    - a *template override stack*, that grows when a template override element renders.
     
-    However, contexts are not responsible for providing values that should be rendered. Expressions built at the parsing phase are. For instance, expressions are able to perform a lookup for scoped expressions such as `person.name`, or apply filters such as `uppercase(name)`.
+    A rendering context is able to provide the value for an identifier such as `name` found in a `{{name}}` tag. However, runtime is not directly responsible for providing values that should be rendered. Expressions built at the parsing phase are. They query the context in order to compute their values.
 
-- **Template delegate**
-    - `GRMustacheInvocation`
-    - `GRMustacheTemplateDelegate`
+    - `<GRMustacheTagDelegate>` (protocol)
 
-    *Invocations* are generated by expressions, and exposed to the *template delegate*, so that the library user can inspect or override values that are rendered.
+    Tags iterate all *tag delegates* in a rendering context and let them observe or alter their rendering.
     
-- **Lambda sections**
-    - `GRMustacheHelper`
-    - `GRMustacheSection`
+    - `<GRMustacheRendering>` (protocol)
 
-    The library user can implement *helpers* in order to have some sections behave as "Mustache lambda sections". In order to be able to perform the job described by the Mustache specification, they are provided with *section* objects that provide the required information and tools.
+    The library user can implement his own *rendering objects* in order to perform custom rendering.
 
-- **Filters**
-    - `GRMustacheFilter`
-    - `GRMustacheFilterLibrary`
-    
-    The *filter library* provides with built-in filters.
+    - `<GRMustacheFilter>` (protocol)
+    - `GRMustacheFilter` (class)
     
     The library user can implement her own *filters*, that will add to the built-in ones.
-    
-- **Misc**
-    - `GRMustache`
-    - `GRMustacheNSUndefinedKeyExceptionGuard`
-    
-    *GRMustache* provides with library configuration.
-    
-    *GRMustacheNSUndefinedKeyExceptionGuard* is a funny tool that allows the library user to avoid his debugger to stop on every NSUndefinedKeyException raised by the template rendering.
     
     
 
 ### Project organisation
 
-Objective-C files that make GRMustache are stored in the `src/classes` folder. They are added to both `GRMustache4-MacOS` and `GRMustache4-iOS` targets of the `src/GRMustache.xcodeproj` project.
+Objective-C files that make GRMustache are stored in the `src/classes` folder. They are added to both `GRMustache6-MacOS` and `GRMustache6-iOS` targets of the `src/GRMustache.xcodeproj` project.
 
 Headers are splitted in two categories:
 
@@ -124,7 +129,7 @@ There are two kinds of tests, all stored in the `src/tests` folder.
 - tests of private APIs
 - tests of public APIs
 
-When a file is added or removed from the `src/tests` folder, both `GRMustache4-MacOSTests` and `GRMustache4-iOSTests` targets of the `src/GRMustache.xcodeproj` project are updated.
+When a file is added or removed from the `src/tests` folder, both `GRMustache6-MacOSTests` and `GRMustache6-iOSTests` targets of the `src/GRMustache.xcodeproj` project are updated.
 
 ### Tests of private APIs
 
@@ -163,4 +168,4 @@ Then, issue the following command:
 
     $ make clean && make
 
-[up](introduction.md)
+[up](../../../../GRMustache#documentation)

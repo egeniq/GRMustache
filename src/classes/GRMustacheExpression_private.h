@@ -1,6 +1,6 @@
 // The MIT License
 // 
-// Copyright (c) 2012 Gwendal Roué
+// Copyright (c) 2013 Gwendal Roué
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -24,15 +24,13 @@
 #import "GRMustacheAvailabilityMacros_private.h"
 
 @class GRMustacheContext;
-@class GRMustacheTemplate;
-@class GRMustacheInvocation;
 @class GRMustacheToken;
 
 /**
- * The GRMustacheExpression is the protocol for objects that can provide values
- * out of the data provided by the library user.
+ * The GRMustacheExpression is the base class for objects that can provide
+ * values out of a Mustache rendering context.
  *
- * GRMustacheExpression instances are built by GRMustacheParser. For instance,
+ * GRMustacheExpression instances are built by GRMustacheParser. For example,
  * the `{{ name }}` tag would yield a GRMustacheIdentifierExpression.
  *
  * @see GRMustacheFilteredExpression
@@ -40,46 +38,47 @@
  * @see GRMustacheImplicitIteratorExpression
  * @see GRMustacheScopedExpression
  */
-@protocol GRMustacheExpression <NSObject>
-@required
+@interface GRMustacheExpression : NSObject {
+@private
+    GRMustacheToken *_token;
+}
 
 /**
  * This property stores a token whose sole purpose is to help the library user
- * debugging his templates, using the tokens' ability to output their location
- * (`{{ foo }} at line 23 of /path/to/template`).
- *
- * @see GRMustacheTemplateDelegate
- * @see [GRMustacheInvocation description]
- * @see [GRMustacheToken description]
+ * debugging his templates, using the token's ability to output its location
+ * (`{{ foo }}` at line 23 of /path/to/template).
  */
-@property (nonatomic, retain) GRMustacheToken *debuggingToken;
+@property (nonatomic, retain) GRMustacheToken *token GRMUSTACHE_API_INTERNAL;
 
 /**
- * This method performs three jobs in the same time:
+ * Evaluates an expression against a rendering context.
  *
- * 1. Returns the value of the expression, given a context and a filterContext.
- * 2. Invokes delegates' callbacks when appropriate for the actual expression's
- *    class.
- * 3. Processes _ioInvocation_ so that on return it contains, or not, a
- *    GRMustacheInvocation object that would provide a template's delegate
- *    with the information it needs, depending on the actual expression's
- *    class.
+ * @param value      Upon return contains the value of the expression
+ * @param context    A Mustache rendering context
+ * @param protected  Upon return contains YES if the computed value comes from
+ *                   the protected stack of the context, NO otherwise.
+ * @param error      If there is an error computing the value, upon return
+ *                   contains an NSError object that describes the problem.
  *
- * @param context             A context where to look for identifiers.
- * @param filterContext       A context where to look for filters.
- * @param delegatingTemplate  A template to be used for
- *                            GRMustacheTemplateDelegate callbacks, or nil.
- * @param delegates           An array of GRMustacheTemplateDelegate instances
- *                            whose callbacks should be invoked when
- *                            appropriate, or nil.
- * @param ioInvocation        Contains a pointer to a GRMustacheInvocation, or
- *                            nil. Upon return, contains a GRMustacheInvocation,
- *                            or nil, depending on the expression.
+ * @return YES if the value could be computed
+ *
+ * @see GRMustacheContext
  */
-- (id)valueForContext:(GRMustacheContext *)context
-        filterContext:(GRMustacheContext *)filterContext
-   delegatingTemplate:(GRMustacheTemplate *)delegatingTemplate
-            delegates:(NSArray *)delegates
-           invocation:(GRMustacheInvocation **)ioInvocation;
+- (BOOL)hasValue:(id *)value withContext:(GRMustacheContext *)context protected:(BOOL *)protected error:(NSError **)error GRMUSTACHE_API_INTERNAL;
 
+/**
+ * Returns a Boolean value that indicates whether the receiver and a given
+ * object are equal.
+ *
+ * Expressions are equal if and only if the result of their
+ * `hasValue:withContext:protected:error:` implementation would return the same
+ * value in a given rendering context.
+ *
+ * Default implementation is NSObject's one: subclasses must override.
+ *
+ * @param anObject  The object to be compared to the receiver.
+ *
+ * @return YES if the receiver and anObject are equal, otherwise NO.
+ */
+- (BOOL)isEqual:(id)anObject; // no availability macro for Foundation method declaration
 @end

@@ -1,6 +1,6 @@
 // The MIT License
 // 
-// Copyright (c) 2012 Gwendal Roué
+// Copyright (c) 2013 Gwendal Roué
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -26,6 +26,7 @@
 
 
 @class GRMustacheParser;
+@class GRMustacheConfiguration;
 
 
 // =============================================================================
@@ -79,8 +80,8 @@
 @interface GRMustacheParser : NSObject {
 @private
     id<GRMustacheParserDelegate> _delegate;
-    NSString *_otag;
-    NSString *_ctag;
+    NSString *_tagStartDelimiter;
+    NSString *_tagEndDelimiter;
     NSMutableSet *_pragmas;
 }
 
@@ -101,6 +102,15 @@
 @property (nonatomic, strong, readonly) NSMutableSet *pragmas GRMUSTACHE_API_INTERNAL;
 
 /**
+ * Returns an initialized parser.
+ *
+ * @param configuration  The GRMustacheConfiguration that affects the
+ *                       parsing phase.
+ * @return a compiler
+ */
+- (id)initWithConfiguration:(GRMustacheConfiguration *)configuration GRMUSTACHE_API_INTERNAL;
+
+/**
  * The parser will invoke its delegate as it builds tokens from the template
  * string.
  * 
@@ -108,4 +118,17 @@
  * @param templateID      A template ID (see GRMustacheTemplateRepository)
  */
 - (void)parseTemplateString:(NSString *)templateString templateID:(id)templateID GRMUSTACHE_API_INTERNAL;
+
+/**
+ * Returns an expression from a string.
+ *
+ * @param string        A string.
+ * @param outInvalid    If the string contains an invalid expression, upon
+ *                      return contains YES.
+ *
+ * @return An expression, or nil if the parsing fails or if the expression is
+ * empty.
+ */
++ (GRMustacheExpression *)parseExpression:(NSString *)string invalid:(BOOL *)outInvalid GRMUSTACHE_API_INTERNAL;
+
 @end

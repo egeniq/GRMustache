@@ -1,6 +1,6 @@
 // The MIT License
 // 
-// Copyright (c) 2012 Gwendal Roué
+// Copyright (c) 2013 Gwendal Roué
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,7 +22,6 @@
 
 #import "GRMustacheIdentifierExpression_private.h"
 #import "GRMustacheContext_private.h"
-#import "GRMustacheInvocation_private.h"
 
 @interface GRMustacheIdentifierExpression()
 @property (nonatomic, copy) NSString *identifier;
@@ -31,10 +30,9 @@
 @end
 
 @implementation GRMustacheIdentifierExpression
-@synthesize debuggingToken=_debuggingToken;
 @synthesize identifier=_identifier;
 
-+ (id)expressionWithIdentifier:(NSString *)identifier
++ (instancetype)expressionWithIdentifier:(NSString *)identifier
 {
     return [[[self alloc] initWithIdentifier:identifier] autorelease];
 }
@@ -50,12 +48,11 @@
 
 - (void)dealloc
 {
-    [_debuggingToken release];
     [_identifier release];
     [super dealloc];
 }
 
-- (BOOL)isEqual:(id<GRMustacheExpression>)expression
+- (BOOL)isEqual:(id)expression
 {
     if (![expression isKindOfClass:[GRMustacheIdentifierExpression class]]) {
         return NO;
@@ -66,19 +63,12 @@
 
 #pragma mark - GRMustacheExpression
 
-- (id)valueForContext:(GRMustacheContext *)context filterContext:(GRMustacheContext *)filterContext delegatingTemplate:(GRMustacheTemplate *)delegatingTemplate delegates:(NSArray *)delegates invocation:(GRMustacheInvocation **)ioInvocation
+- (BOOL)hasValue:(id *)value withContext:(GRMustacheContext *)context protected:(BOOL *)protected error:(NSError **)error
 {
-    id value = [context valueForKey:_identifier];
-    
-    if (delegates.count > 0) {
-        NSAssert(ioInvocation, @"WTF");
-        *ioInvocation = [[[GRMustacheInvocation alloc] init] autorelease];
-        (*ioInvocation).debuggingToken = _debuggingToken;
-        (*ioInvocation).returnValue = value;
-        (*ioInvocation).key = _identifier;
+    if (value != NULL) {
+        *value = [context contextValueForKey:_identifier protected:protected];
     }
-    
-    return value;
+    return YES;
 }
 
 @end
