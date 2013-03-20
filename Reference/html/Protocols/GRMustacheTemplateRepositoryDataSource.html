@@ -7,12 +7,12 @@
 		<meta name="viewport" content="width=550" />
 		<link rel="stylesheet" type="text/css" href="../css/styles.css" media="all" />
 		<link rel="stylesheet" type="text/css" media="print" href="../css/stylesPrint.css" />
-		<meta name="generator" content="appledoc 2.0.5 (build 789)" />
+		<meta name="generator" content="appledoc 2.1 (build 858)" />
 	</head>
 	<body>
 		<header id="top_header">
 			<div id="library" class="hideInXcode">
-				<h1><a id="libraryTitle" href="../index.html">GRMustache </a></h1>
+				<h1><a id="libraryTitle" href="../index.html">GRMustache 6.4 </a></h1>
 				<a id="developerHome" href="../index.html">Gwendal Roué</a>
 			</div>
 			
@@ -63,10 +63,6 @@
 
 
 <li role="treeitem" id="task_treeitem"><span class="nodisclosure"></span><span class="sectionName"><a href="#tasks">Tasks</a></span><ul>
-	
-	<li><span class="nodisclosure"></span><span class="sectionName"><a href="#task_Building Template IDs from Template Names">Building Template IDs from Template Names</a></span></li>
-	
-	<li><span class="nodisclosure"></span><span class="sectionName"><a href="#task_Providing Template Strings from Template IDs">Providing Template Strings from Template IDs</a></span></li>
 	
 </ul></li>
 
@@ -138,8 +134,8 @@ template and partial names.</p>
 						<h2 class="subtitle subtitle-tasks">Tasks</h2>
 						
 						
-						<a title="Building Template IDs from Template Names" name="task_Building Template IDs from Template Names"></a>
-						<h3 class="subsubtitle task-title">Building Template IDs from Template Names</h3>
+						
+						
 
 						<ul class="task-list">
 							<li>
@@ -150,15 +146,7 @@ template or a template partial.</p></span>
 	</span>
 	
 	<span class="task-item-suffix">required method</span>
-</li>
-						</ul>
-						
-						
-						<a title="Providing Template Strings from Template IDs" name="task_Providing Template Strings from Template IDs"></a>
-						<h3 class="subsubtitle task-title">Providing Template Strings from Template IDs</h3>
-
-						<ul class="task-list">
-							<li>
+</li><li>
 	<span class="tooltip">
 		<code><a href="#//api/name/templateRepository:templateStringForTemplateID:error:">&ndash;&nbsp;templateRepository:templateStringForTemplateID:error:</a></code>
 		<span class="tooltip"><p>Provided with a template ID that comes from
@@ -235,7 +223,7 @@ template or a template partial.</p>
 	
 	<div class="method-subsection availability">
 		<h4 class="method-subtitle parameter-title">Availability</h4>
-		<p>v1.13</p>
+		
 	</div>
 	
 	
@@ -243,16 +231,16 @@ template or a template partial.</p>
 	<div class="method-subsection discussion-section">
 		<h4 class="method-subtitle">Discussion</h4>
 		<p>The class of this ID is opaque: your implementation of a
-<a href="GRMustacheTemplateRepositoryDataSource.html">GRMustacheTemplateRepositoryDataSource</a> would define, for itself, what kind of
+GRMustacheTemplateRepositoryDataSource would define, for itself, what kind of
 object would identity a template or a partial.</p>
 
-<p>For instance, a file-based data source may use NSString objects containing
+<p>For example, a file-based data source may use NSString objects containing
 paths to the templates.</p>
 
-<p>You should try to choose &ldquo;human-readable&rdquo; template IDs. That is because
-template IDs are embedded in the description of errors that may happen during
-a template processing, in order to help the library user locate, and fix, the
-faulting template.</p>
+<p>You should try to choose &ldquo;human-readable&rdquo; template IDs, because template IDs
+are embedded in the description of errors that may happen during a template
+processing, in order to help the library user locate, and fix, the faulting
+template.</p>
 
 <p>Whenever relevant, template and partial hierarchies are supported via the
 <em>baseTemplateID</em> parameter: it contains the template ID of the enclosing
@@ -263,8 +251,11 @@ partial that is referred from a raw template string (see
 <p>Not all data sources have to implement hierarchies: they can simply ignore
 this parameter.</p>
 
-<p>The returned value can be nil: the library user would then eventually get an
-NSError of domain GRMustacheErrorDomain and code
+<p>Data sources that implement hierarchies have to implement their own support
+for absolute partial paths.</p>
+
+<p>The return value of this method can be nil: the library user would then
+eventually get an NSError of domain GRMustacheErrorDomain and code
 GRMustacheErrorCodeTemplateNotFound.</p>
 	</div>
 	
@@ -296,7 +287,7 @@ returns a Mustache template string.</p>
 	
     
 
-	<div class="method-subsection method-declaration"><code>- (NSString *)templateRepository:(GRMustacheTemplateRepository *)<em>templateRepository</em> templateStringForTemplateID:(id)<em>templateID</em> error:(NSError **)<em>outError</em></code></div>
+	<div class="method-subsection method-declaration"><code>- (NSString *)templateRepository:(GRMustacheTemplateRepository *)<em>templateRepository</em> templateStringForTemplateID:(id)<em>templateID</em> error:(NSError **)<em>error</em></code></div>
 
     
 	
@@ -317,7 +308,7 @@ returns a Mustache template string.</p>
 		</dl>
 		
 		<dl class="argument-def parameter-def">
-			<dt><em>outError</em></dt>
+			<dt><em>error</em></dt>
 			<dd><p>If there is an error returning a template string,</p>
 
 <pre><code>                       upon return contains nil, or an NSError object
@@ -338,18 +329,18 @@ returns a Mustache template string.</p>
 	
 	<div class="method-subsection availability">
 		<h4 class="method-subtitle parameter-title">Availability</h4>
-		<p>v1.13</p>
+		
 	</div>
 	
 	
 	
 	<div class="method-subsection discussion-section">
 		<h4 class="method-subtitle">Discussion</h4>
-		<p>For instance, a file-based data source may interpret the template ID as a
+		<p>For example, a file-based data source may interpret the template ID as a
 NSString object containing paths to the template, and return the file
 content.</p>
 
-<p>As usually, whenever this method returns nil, the <em>outError</em> parameter should
+<p>As usual, whenever this method returns nil, the <em>error</em> parameter should
 point to a valid NSError. This NSError would eventually reach the library
 user.</p>
 	</div>
@@ -381,9 +372,9 @@ user.</p>
 				<div id="footer">
 					<hr />
 					<div class="footer-copyright">
-						<p><span class="copyright">&copy; 2012 Gwendal Roué. All rights reserved. (Last updated: 2012-08-04)</span><br />
+						<p><span class="copyright">&copy; 2013 Gwendal Roué. All rights reserved. (Last updated: 2013-02-14)</span><br />
 						
-						<span class="generator">Generated by <a href="http://appledoc.gentlebytes.com">appledoc 2.0.5 (build 789)</a>.</span></p>
+						<span class="generator">Generated by <a href="http://appledoc.gentlebytes.com">appledoc 2.1 (build 858)</a>.</span></p>
 						
 					</div>
 				</div>

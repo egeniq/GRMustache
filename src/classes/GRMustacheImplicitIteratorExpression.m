@@ -1,6 +1,6 @@
 // The MIT License
 // 
-// Copyright (c) 2012 Gwendal Roué
+// Copyright (c) 2013 Gwendal Roué
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -22,23 +22,15 @@
 
 #import "GRMustacheImplicitIteratorExpression_private.h"
 #import "GRMustacheContext_private.h"
-#import "GRMustacheInvocation_private.h"
 
 @implementation GRMustacheImplicitIteratorExpression
-@synthesize debuggingToken=_debuggingToken;
 
-+ (id)expression
++ (instancetype)expression
 {
     return [[[self alloc] init] autorelease];
 }
 
-- (void)dealloc
-{
-    [_debuggingToken release];
-    [super dealloc];
-}
-
-- (BOOL)isEqual:(id<GRMustacheExpression>)expression
+- (BOOL)isEqual:(id)expression
 {
     return [expression isKindOfClass:[GRMustacheImplicitIteratorExpression class]];
 }
@@ -46,17 +38,15 @@
 
 #pragma mark - GRMustacheExpression
 
-- (id)valueForContext:(GRMustacheContext *)context filterContext:(GRMustacheContext *)filterContext delegatingTemplate:(GRMustacheTemplate *)delegatingTemplate delegates:(NSArray *)delegates invocation:(GRMustacheInvocation **)ioInvocation
+- (BOOL)hasValue:(id *)value withContext:(GRMustacheContext *)context protected:(BOOL *)protected error:(NSError **)error
 {
-    if (delegates.count > 0) {
-        NSAssert(ioInvocation, @"WTF");
-        *ioInvocation = [[[GRMustacheInvocation alloc] init] autorelease];
-        (*ioInvocation).debuggingToken = _debuggingToken;
-        (*ioInvocation).returnValue = context.object;
-        (*ioInvocation).key = @".";
+    if (protected != NULL) {
+        *protected = NO;
     }
-    
-    return context.object;
+    if (value != NULL) {
+        *value = [context currentContextValue];
+    }
+    return YES;
 }
 
 @end

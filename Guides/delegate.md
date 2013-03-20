@@ -1,134 +1,239 @@
-[up](introduction.md), [next](../../../tree/master/Guides/sample_code)
+[up](../../../../GRMustache#documentation), [next](rendering_objects.md)
 
-GRMustacheTemplateDelegate protocol
-===================================
+GRMustacheTagDelegate protocol
+==============================
 
-This protocol lets you observe, and possibly alter the rendering of a template.
+Overview
+--------
+
+This protocol lets you observe, and possibly alter the rendering of the Mustache tags that are provided with your own data: `{{ name }}`, `{{# name }}...{{/}}`, `{{^ name }}...{{/}}` and `{{$ name }}...{{/}}`, respectively *variable tags*, *section tags*, *inverted section tags*, and *overridable section tags*.
+
+The first three are documented in the [Runtime Guide](runtime.md).
+
+Overridable sections are documented in the [Partials Guide](partials.md).
 
 
-Template delegate and section delegates
+Observing the rendering of Mustache tags
+----------------------------------------
+
+```objc
+@protocol GRMustacheTagDelegate<NSObject>
+@optional
+- (id)mustacheTag:(GRMustacheTag *)tag willRenderObject:(id)object;
+- (void)mustacheTag:(GRMustacheTag *)tag didRenderObject:(id)object as:(NSString *)rendering;
+- (void)mustacheTag:(GRMustacheTag *)tag didFailRenderingObject:(id)object withError:(NSError *)error;
+```
+
+The _object_ argument is the rendered value: a string, a number, an array, depending on the data you provided.
+
+The _tag_ argument represents the rendering tag: `{{ name }}`, `{{# name }}...{{/}}`, etc. It provides you with the following methods:
+
+```objc
+@interface GRMustacheTag: NSObject
+
+// The tag type
+@property (nonatomic, readonly) GRMustacheTagType type;
+
+// A string describing the tag
+- (NSString *)description;
+@end
+
+typedef enum {
+    GRMustacheTagTypeVariable = 1 << 1,           // The type for tags such as {{ name }} and {{{ name }}}
+    GRMustacheTagTypeSection = 1 << 2,            // The type for tags such as {{# name }}...{{/}}
+    GRMustacheTagTypeOverridableSection = 1 << 3, // The type for tags such as {{$ name }}...{{/}}
+    GRMustacheTagTypeInvertedSection = 1 << 4,    // The type for tags such as {{^ name }}...{{/}}
+} GRMustacheTagType;
+```
+
+The `description` method provides a clear description of the tag, such as:
+
+    <GRMustacheVariableTag `{{name}}` at line 18 of template /path/to/Profile.mustache>
+
+Note that those methods do not allow you to build a complete "stack trace" of a template rendering.
+
+For instance, a tag like `{{ person.name }}` is rendered once. Thus `mustacheTag:willRenderObject:` will be called once. If the person has been found, the rendered object will be the name of the person. If the person could not be found, the rendered object will be `nil`.
+
+Also: if a section tag `{{# name }}...{{/}}` is provided with an array, its content is rendered several times. However `mustacheTag:willRenderObject:` will be called once, with the array passed in the _object_ argument.
+
+
+### Observing the rendering of all tags in a template
+
+In order to observe the rendering of all tags rendered by a template, you have your tag delegate enter the *base context* of the template.
+
+The base context contains values and tag delegates that are always available for the template rendering. It contains all the ready for use tools of the [standard library](standard_library.md), for example. Contexts are detailed in the [Rendering Objects](rendering_objects.md) and [Protected Contexts](protected_contexts) Guides.
+
+```objc
+@interface Document : NSObject<GRMustacheTagDelegate>
+- (NSString *)render;
+@end
+
+@implementation Document
+
+- (NSString *)render
+{
+    NSString *templateString = @"{{greeting}} {{#person}}{{name}}{{/}}!";
+    GRMustacheTemplate *template = [GRMustacheTemplate templateFromString:templateString error:NULL];
+    template.baseContext = [template.baseContext contextByAddingTagDelegate:self];
+    
+    id data = @{
+        @"greeting": @"Hello",
+        @"person": @{
+            @"name": @"Arthur"
+        },
+    };
+    return [template renderObject:data error:NULL];
+}
+
+- (void)mustacheTag:(GRMustacheTag *)tag didRenderObject:(id)object as:(NSString *)rendering
+{
+    NSLog(@"%@ did render %@ as %@", tag, object, rendering);
+}
+
+@end
+
+// <GRMustacheVariableTag `{{greeting}}` at line 1> did render Hello as Hello
+// <GRMustacheVariableTag `{{name}}` at line 1> did render Arthur as Arthur
+// <GRMustacheSectionTag `{{#person}}` at line 1> did render { name = Arthur } as Arthur
+[[Document new] render];
+```
+
+### Observing the rendering of all tags in a section
+
+When a Mustache section renders an object that conforms to the `GRMustacheTagDelegate` protocol, this object observes the rendering of all tags inside the section. As sections get nested, tags get more and more delegates.
+
+Before we give an example, let's see how tag delegates can also *alter* the rendering.
+
+
+Altering the rendering of Mustache tags
 ---------------------------------------
 
-While rendering a template, several objects may get messages from GRMustache:
+The value returned by the `mustacheTag:willRenderObject:` is the value that will actually be rendered.
 
-- The template's delegate itself, which you set via the `delegate` property of the GRMustacheTemplate class.
-- Objects attached to sections, as long as they conform to the GRMustacheTemplateDelegate protocol.
+You can, for instance, provide default rendering for missing values:
 
-The template's delegate can observe the full template rendering. However, sections delegates can only observe the rendering of their inner content. As sections get nested, a template gets more and more delegates.
-
-You'll find template delegate usages below. Section delegates are used in the [localization](sample_code/localization.md) sample code.
-
-
-Observe the template rendering
-------------------------------
-
-### Whole template rendering
-
-The following methods are called before, and after the whole template rendering:
+### Default value for missing keys
 
 ```objc
-- (void)templateWillRender:(GRMustacheTemplate *)template;
-- (void)templateDidRender:(GRMustacheTemplate *)template;
-```
+@interface Document : NSObject<GRMustacheTagDelegate>
+- (NSString *)render;
+@end
 
-Section delegates are not sent these messages. Only template delegates are.
+@implementation Document
 
-### Tag rendering
-
-The following methods are called before, and after the rendering of substitution and sections tags (`{{name}}` and `{{#name}}...{{/name}}`):
-
-```objc
-- (void)template:(GRMustacheTemplate *)template willInterpretReturnValueOfInvocation:(GRMustacheInvocation *)invocation as:(GRMustacheInterpretation)interpretation;
-- (void)template:(GRMustacheTemplate *)template didInterpretReturnValueOfInvocation:(GRMustacheInvocation *)invocation as:(GRMustacheInterpretation)interpretation;
-```
-
-Maybe verbose. But quite on target: as a matter of fact, in order to render a tag, GRMustache has to *invoke* the tag name on the rendered object, the one you've given to the template, and then to *interpret* it.
-
-You can read the following properties of the *invocation* parameter:
-
-- `id returnValue`: the return value of the invocation.
-- `NSString *key`: the key that did provide this value.
-- `NSString *description`: a string that helps you locate the corresponding Mustache tag.
-
-Note that those methods do not allow you to build a complete "stack trace" of GRMustache rendering. They are not called for each accessed key. They are called for each tag rendering, which is quite different.
-
-For instance, a tag like `{{person.name}}` is rendered once. Thus `template:willInterpretReturnValueOfInvocation:as:` will be called once. If the person has been found, the invocation's key will be `@"name"`, and the return value the name of the person. If the person could not be found, the key will be `@"person"`, and the return value `nil`.
-
-Also: if a section tag `{{#name}}...{{/name}}` is provided with an NSArray, its content is rendered several times. However `template:willInterpretReturnValueOfInvocation:as:` will be called once, with the array stored in the return value of the invocation.
-
-The *interpretation* parameter tells you how the return value of the invocation is used:
-
-```objc
-typedef enum {
-    GRMustacheInterpretationSection,
-    GRMustacheInterpretationVariable,
-    GRMustacheInterpretationFilterArgument,
-} GRMustacheInterpretation;
-```
-
-`GRMustacheInterpretationVariable` tells you that the return value is rendered by a Mustache variable tag such as `{{name}}`. Basically, GRMustache simply invokes its `description` method. See [Guides/runtime.md](runtime.md) for more information.
-
-`GRMustacheInterpretationSection` tells you that the return value is used by a Mustache section such as `{{#name}}...{{/name}}`. Mustache sections are versatile: there are boolean sections, loop sections, and lambda sections, and this depends solely on the rendered value, that is to say: the return value of the invocation. Again, see [Guides/runtime.md](runtime.md) for more information.
-
-`GRMustacheInterpretationFilterArgument` tells you that the return value is about to be processed by a filter such as `{{ f(name) }}`. See [Guides/filters.md](filters.md) for more information.
-
-
-### A practical use: debugging templates
-
-You may, for instance, give your templates a delegate that locate missing keys:
-
-```objc
-- (void)template:(GRMustacheTemplate *)template willInterpretReturnValueOfInvocation:(GRMustacheInvocation *)invocation as:(GRMustacheInterpretation)interpretation
+- (NSString *)render
 {
-    // When returnValue is nil, GRMustache could not find any value to render.
-    if (invocation.returnValue == nil) {
-        
-        // Log the missing key
-        NSLog(@"GRMustache missing key: `%@` for %@", invocation.key, invocation.description);
-    }
+    NSString *templateString = @"{{greeting}} {{#person}}{{name}}{{/}}!";
+    GRMustacheTemplate *template = [GRMustacheTemplate templateFromString:templateString error:NULL];
+    template.baseContext = [template.baseContext contextByAddingTagDelegate:self];
+    
+    id data = @{
+        @"greeting": @"Hello",
+        @"person": @{
+            @"firstName": @"Arthur"
+        },
+    };
+    return [template renderObject:data error:NULL];
 }
+
+- (id)mustacheTag:(GRMustacheTag *)tag willRenderObject:(id)object
+{
+    if (object == nil) {
+        NSLog(@"Missing value for %@", tag);
+        return @"DEFAULT";
+    }
+    return object;
+}
+
+@end
+
+// Missing value for <GRMustacheVariableTag `{{name}}` at line 1>
+// Renders "Hello DEFAULT!"
+[[Document new] render];
 ```
 
-You'll get something like:
 
-```
-GRMustache missing key: `items` for <GRMustacheInvocation: {{#items}} at line 23
-in template /path/to/template.mustache>
-```
+### Tag Delegates as Cross-Platform Filters
 
-Alter the template rendering
-----------------------------
+Tag delegates can alter the rendering of all tags inside the section they are attached to.
 
-The `returnValue` property of the *invocation* parameter can be written. If you set it in `template:willInterpretReturnValueOfInvocation:as:`, GRMustache will render the value you have provided.
+Let's consider the behavior of NSFormatter in GRMustache. They are able to format all variable tags inside a section (check the [NSFormatter Guide](NSFormatter.md)).
 
-**Warning: If your goal is to design templates that remain compatible with [other Mustache implementations](https://github.com/defunkt/mustache/wiki/Other-Mustache-implementations), use this feature with great care.**
+For example, `{{#percent}}x = {{x}}{{/percent}}` renders as `x = 50 %` when `percent` is attached to an NSNumberFormatter. That is because formatters are *tag delegates*.
 
+We could also use [filters](filters.md) in order to format numbers: `x = {{ percent(x) }}` would render just as well.
 
-### A practical use: providing default values for missing keys
+However, `{{#percent}}x = {{x}}{{/percent}}` has one advantage over `x = {{ percent(x) }}`: it uses plain Mustache syntax, and is compatible with [other Mustache implementations](https://github.com/defunkt/mustache/wiki/Other-Mustache-implementations).
+
+With such a common template, it's now a matter of providing different data, depending on the platform:
+
+    // common template
+    {{#percent}}x = {{x}}{{/percent}}
+    
+    // data for GRMustache
+    {
+      "x": 0.5,
+      "percent": (some well-configured NSNumberFormatter)
+    }
+
+    // data for other Mustache implementations
+    {
+      "percent": {
+        "x": "50 %"
+      }
+    }
+
+See? When you, GRMustache user, can provide your raw model data and have tag delegates do the formatting, users of the other implementations can still *prepare* their data and build a "view model" that contains the values that should be rendered. Eventually both renderings are identical.
+
+Let's have a closer look at how you would convert a filter-based template to a tag delegate-based template: let's convert `{{ uppercase(name) }}`.
+
+In order to turn the `uppercase` filter into a tag delegate, we need a Mustache section: `{{#uppercase}}{{name}}{{/uppercase}}`, and a tag delegate attached to the `uppercase` key.
+
+We also have to make sure our tag delegate does not enter the [context stack](runtime.md), so that its own methods and properties do not shadow your data: `{{#uppercase}}{{description}}{{/uppercase}}` for instance should render without invoking the `description` method of the tag delegate. This involves the [GRMustacheRendering protocol](rendering_objects.md), which allows the tag delegate to take full responsibility of its rendering:
 
 ```objc
-- (void)template:(GRMustacheTemplate *)template willInterpretReturnValueOfInvocation:(GRMustacheInvocation *)invocation as:(GRMustacheInterpretation)interpretation
+@interface UppercaseTagDelegate : NSObject<GRMustacheTagDelegate, GRMustacheRendering>
+@end
+
+@implementation UppercaseTagDelegate
+
+// The tag delegate facet
+- (id)mustacheTag:(GRMustacheTag *)tag willRenderObject:(id)object
 {
-    // When returnValue is nil, GRMustache could not find any value to render.
-    if (invocation.returnValue == nil) {
-        invocation.returnValue = @"DEFAULT";
-    }
+    return [[object description] uppercaseString];
 }
+
+// The rendering object facet
+- (NSString *)renderForMustacheTag:(GRMustacheTag *)tag context:(GRMustacheContext *)context HTMLSafe:(BOOL *)HTMLSafe error:(NSError *__autoreleasing *)error
+{
+    // Have self enter the context as a tag delegate - but not in the context stack
+    context = [context contextByAddingTagDelegate:self];
+    
+    // Render the Mustache tag.
+    return [tag renderContentWithContext:context HTMLSafe:HTMLSafe error:error];
+}
+
+@end
+
+id data = @{
+  @"name": @"Johannes Kepler",
+  @"uppercase": [[UppercaseTagDelegate alloc] init],
+};
+
+NSString *rendering = [GRMustacheTemplate renderObject:data
+                                            fromString:@"{{#uppercase}}{{name}}{{/uppercase}}"
+                                                 error:NULL];
 ```
 
-### Relationship with filters and helpers
-
-Usually, [filters](filters.md) and [helpers](helpers.md) should do the trick when you want to alter a template's rendering.
-
-However, they both require to be explicited invoked from the template: `{{#helper}}...{{/helper}}`, and `{{ filter(...) }}`.
-
-GRMustacheTemplateDelegate will help you when you can not, or do not want, to embed your extra behaviors right into the template.
+The final rendering is "JOHANNES KEPLER".
 
 
-Sample code
------------
+Compatibility with other Mustache implementations
+-------------------------------------------------
 
-The [localization.md](sample_code/localization.md) sample code uses section delegates for localizing portions of template.
+The [Mustache specification](https://github.com/mustache/spec) does not have the concept of "tag delegates".
+
+**As a consequence, if your goal is to design templates that remain compatible with [other Mustache implementations](https://github.com/defunkt/mustache/wiki/Other-Mustache-implementations), use `GRMustacheTagDelegate` with great care.**
 
 
-[up](introduction.md), [next](../../../tree/master/Guides/sample_code)
+[up](../../../../GRMustache#documentation), [next](rendering_objects.md)

@@ -1,6 +1,6 @@
 // The MIT License
 // 
-// Copyright (c) 2012 Gwendal Roué
+// Copyright (c) 2013 Gwendal Roué
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -59,7 +59,7 @@
     self.managedObjectContext = nil;
 }
 
-- (void)testNSUndefinedKeyExceptionSilencing
+- (void)testNSUndefinedKeyExceptionPrevention
 {
     [GRMustache preventNSUndefinedKeyExceptionAttack];
     
@@ -67,20 +67,31 @@
     {
         GRMustacheContextDidCatchNSUndefinedKeyException = NO;
         id object = [[[NSObject alloc] init] autorelease];
-        [template renderObject:object];
+        [template renderObject:object error:NULL];
+        
+        // make sure object did not raise any exception
         STAssertEquals(NO, GRMustacheContextDidCatchNSUndefinedKeyException, @"");
+        
+        // make sure object raises exception again
+        STAssertThrowsSpecificNamed([object valueForKey:@"foo"], NSException, NSUndefinedKeyException, nil);
     }
+    
     {
         GRMustacheContextDidCatchNSUndefinedKeyException = NO;
         NSManagedObject *managedObject = [NSEntityDescription insertNewObjectForEntityForName:@"NSManagedObject" inManagedObjectContext:self.managedObjectContext];
-        [template renderObject:managedObject];
+        [template renderObject:managedObject error:NULL];
+        
+        // make sure object did not raise any exception
         STAssertEquals(NO, GRMustacheContextDidCatchNSUndefinedKeyException, @"");
+        
+        // make sure object raises exception again
+        STAssertThrowsSpecificNamed([managedObject valueForKey:@"foo"], NSException, NSUndefinedKeyException, nil);
     }
     
-    // Regression test: until 1.7.2, NSUndefinedKeyException guard would prevent rendering nil object
+    // Regression test: until 1.7.2, NSUndefinedKeyException prevention would fail with nil object
     
-    STAssertEqualObjects([template render], @"foo:", nil);
-    STAssertEqualObjects([template renderObject:nil], @"foo:", nil);
+    STAssertEqualObjects([template renderObject:nil error:NULL], @"foo:", nil);
+    STAssertEqualObjects([template renderObject:nil error:NULL], @"foo:", nil);
 }
 
 @end

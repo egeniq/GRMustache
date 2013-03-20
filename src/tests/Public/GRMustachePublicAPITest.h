@@ -1,6 +1,6 @@
 // The MIT License
 // 
-// Copyright (c) 2012 Gwendal Roué
+// Copyright (c) 2013 Gwendal Roué
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -24,4 +24,11 @@
 #import "GRMustacheTestBase.h"
 
 @interface GRMustachePublicAPITest: GRMustacheTestBase
+@end
+
+@interface GRMustachePublicAPISuiteTest: GRMustachePublicAPITest
+- (void)runTestsFromResource:(NSString *)name subdirectory:(NSString *)subpath;
+- (GRMustacheTemplate *)templateForTemplateString:(NSString *)templateString partialsDictionary:(NSDictionary *)partialsDictionary error:(NSError **)error;
+- (GRMustacheTemplate *)templateForTemplateNamed:(NSString *)templateName templatesPath:(NSString *)templatesPath encoding:(NSStringEncoding)encoding error:(NSError **)error;
+- (GRMustacheTemplate *)templateForTemplateNamed:(NSString *)templateName templatesURL:(NSURL *)templatesURL encoding:(NSStringEncoding)encoding error:(NSError **)error;
 @end
