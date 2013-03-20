@@ -1,6 +1,6 @@
 // The MIT License
 // 
-// Copyright (c) 2012 Gwendal Roué
+// Copyright (c) 2013 Gwendal Roué
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -21,55 +21,58 @@
 // THE SOFTWARE.
 
 #import "GRMustacheFilteredExpression_private.h"
-#import "GRMustacheFilter.h"
+#import "GRMustacheFilter_private.h"
+#import "GRMustacheError.h"
 #import "GRMustacheTemplate_private.h"
-#import "GRMustacheInvocation_private.h"
+#import "GRMustacheContext_private.h"
+#import "GRMustacheToken_private.h"
 
 @interface GRMustacheFilteredExpression()
-@property (nonatomic, retain) id<GRMustacheExpression> filterExpression;
-@property (nonatomic, retain) id<GRMustacheExpression> parameterExpression;
-- (id)initWithFilterExpression:(id<GRMustacheExpression>)filterExpression parameterExpression:(id<GRMustacheExpression>)parameterExpression;
+@property (nonatomic, retain) GRMustacheExpression *filterExpression;
+@property (nonatomic, retain) GRMustacheExpression *argumentExpression;
+- (id)initWithFilterExpression:(GRMustacheExpression *)filterExpression argumentExpression:(GRMustacheExpression *)argumentExpression curry:(BOOL)curry;
 @end
 
 @implementation GRMustacheFilteredExpression
-@synthesize debuggingToken=_debuggingToken;
 @synthesize filterExpression=_filterExpression;
-@synthesize parameterExpression=_parameterExpression;
+@synthesize argumentExpression=_argumentExpression;
 
-+ (id)expressionWithFilterExpression:(id<GRMustacheExpression>)filterExpression parameterExpression:(id<GRMustacheExpression>)parameterExpression
++ (instancetype)expressionWithFilterExpression:(GRMustacheExpression *)filterExpression argumentExpression:(GRMustacheExpression *)argumentExpression
 {
-    return [[[self alloc] initWithFilterExpression:filterExpression parameterExpression:parameterExpression] autorelease];
+    return [[[self alloc] initWithFilterExpression:filterExpression argumentExpression:argumentExpression curry:NO] autorelease];
 }
 
-- (id)initWithFilterExpression:(id<GRMustacheExpression>)filterExpression parameterExpression:(id<GRMustacheExpression>)parameterExpression
++ (instancetype)expressionWithFilterExpression:(GRMustacheExpression *)filterExpression argumentExpression:(GRMustacheExpression *)argumentExpression curry:(BOOL)curry
+{
+    return [[[self alloc] initWithFilterExpression:filterExpression argumentExpression:argumentExpression curry:curry] autorelease];
+}
+
+- (id)initWithFilterExpression:(GRMustacheExpression *)filterExpression argumentExpression:(GRMustacheExpression *)argumentExpression curry:(BOOL)curry
 {
     self = [super init];
     if (self) {
         _filterExpression = [filterExpression retain];
-        _parameterExpression = [parameterExpression retain];
+        _argumentExpression = [argumentExpression retain];
+        _curry = curry;
     }
     return self;
 }
 
 - (void)dealloc
 {
-    [_debuggingToken release];
     [_filterExpression release];
-    [_parameterExpression release];
+    [_argumentExpression release];
     [super dealloc];
 }
 
-- (void)setDebuggingToken:(GRMustacheToken *)debuggingToken
+- (void)setToken:(GRMustacheToken *)token
 {
-    if (_debuggingToken != debuggingToken) {
-        [_debuggingToken release];
-        _debuggingToken = [debuggingToken retain];
-        _filterExpression.debuggingToken = _debuggingToken;
-        _parameterExpression.debuggingToken = _debuggingToken;
-    }
+    [super setToken:token];
+    _filterExpression.token = token;
+    _argumentExpression.token = token;
 }
 
-- (BOOL)isEqual:(id<GRMustacheExpression>)expression
+- (BOOL)isEqual:(id)expression
 {
     if (![expression isKindOfClass:[GRMustacheFilteredExpression class]]) {
         return NO;
@@ -77,43 +80,70 @@
     if (![_filterExpression isEqual:((GRMustacheFilteredExpression *)expression).filterExpression]) {
         return NO;
     }
-    return [_parameterExpression isEqual:((GRMustacheFilteredExpression *)expression).parameterExpression];
+    return [_argumentExpression isEqual:((GRMustacheFilteredExpression *)expression).argumentExpression];
 }
 
 
 #pragma mark GRMustacheExpression
 
-- (id)valueForContext:(GRMustacheContext *)context filterContext:(GRMustacheContext *)filterContext delegatingTemplate:(GRMustacheTemplate *)delegatingTemplate delegates:(NSArray *)delegates invocation:(GRMustacheInvocation **)ioInvocation
+- (BOOL)hasValue:(id *)value withContext:(GRMustacheContext *)context protected:(BOOL *)protected error:(NSError **)error
 {
-    id parameter = nil;
-    GRMustacheInvocation *invocation = nil;
-    if (delegates.count > 0) {
-        parameter = [_parameterExpression valueForContext:context filterContext:filterContext delegatingTemplate:delegatingTemplate delegates:delegates invocation:&invocation];
-        if (invocation) {
-            [delegatingTemplate invokeDelegates:delegates willInterpretReturnValueOfInvocation:invocation as:GRMustacheInterpretationFilterArgument];
-            parameter = invocation.returnValue;
-            [delegatingTemplate invokeDelegates:delegates didInterpretReturnValueOfInvocation:invocation as:GRMustacheInterpretationFilterArgument];
-        }
-    } else {
-        parameter = [_parameterExpression valueForContext:context filterContext:filterContext delegatingTemplate:delegatingTemplate delegates:delegates invocation:NULL];
+    id filter;
+    if (![_filterExpression hasValue:&filter withContext:context protected:NULL error:error]) {
+        return NO;
     }
     
-    id<GRMustacheFilter> filter = [_filterExpression valueForContext:filterContext filterContext:nil delegatingTemplate:nil delegates:nil invocation:NULL];
+    id argument;
+    if (![_argumentExpression hasValue:&argument withContext:context protected:NULL error:error]) {
+        return NO;
+    }
     
     if (filter == nil) {
-        [NSException raise:GRMustacheFilterException format:@"Missing filter"];
+        GRMustacheToken *token = self.token;
+        NSString *renderingErrorDescription = nil;
+        if (token.templateID) {
+            renderingErrorDescription = [NSString stringWithFormat:@"Missing filter in tag `%@` at line %lu of template %@", token.templateSubstring, (unsigned long)token.line, token.templateID];
+        } else {
+            renderingErrorDescription = [NSString stringWithFormat:@"Missing filter in tag `%@` at line %lu", token.templateSubstring, (unsigned long)token.line];
+        }
+        NSError *renderingError = [NSError errorWithDomain:GRMustacheErrorDomain code:GRMustacheErrorCodeRenderingError userInfo:[NSDictionary dictionaryWithObject:renderingErrorDescription forKey:NSLocalizedDescriptionKey]];
+        if (error != NULL) {
+            *error = renderingError;
+        } else {
+            NSLog(@"GRMustache error: %@", renderingError.localizedDescription);
+        }
+        return NO;
     }
     
     if (![filter conformsToProtocol:@protocol(GRMustacheFilter)]) {
-        [NSException raise:GRMustacheFilterException format:@"Object does not conform to GRMustacheFilter protocol"];
+        GRMustacheToken *token = self.token;
+        NSString *renderingErrorDescription = nil;
+        if (token.templateID) {
+            renderingErrorDescription = [NSString stringWithFormat:@"Object does not conform to GRMustacheFilter protocol in tag `%@` at line %lu of template %@: %@", token.templateSubstring, (unsigned long)token.line, token.templateID, filter];
+        } else {
+            renderingErrorDescription = [NSString stringWithFormat:@"Object does not conform to GRMustacheFilter protocol in tag `%@` at line %lu: %@", token.templateSubstring, (unsigned long)token.line, filter];
+        }
+        NSError *renderingError = [NSError errorWithDomain:GRMustacheErrorDomain code:GRMustacheErrorCodeRenderingError userInfo:[NSDictionary dictionaryWithObject:renderingErrorDescription forKey:NSLocalizedDescriptionKey]];
+        if (error != NULL) {
+            *error = renderingError;
+        } else {
+            NSLog(@"GRMustache error: %@", renderingError.localizedDescription);
+        }
+        return NO;
     }
     
-    if (ioInvocation) {
-        // no invocation to return
-        *ioInvocation = nil;
+    if (protected != NULL) {
+        *protected = NO;
     }
     
-    return [filter transformedValue:parameter];
+    if (value != NULL) {
+        if (_curry && [filter respondsToSelector:@selector(filterByCurryingArgument:)]) {
+            *value = [(id<GRMustacheFilter>)filter filterByCurryingArgument:argument];
+        } else {
+            *value = [(id<GRMustacheFilter>)filter transformedValue:argument];
+        }
+    }
+    return YES;
 }
 
 @end

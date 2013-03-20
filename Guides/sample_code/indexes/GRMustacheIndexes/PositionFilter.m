@@ -1,17 +1,17 @@
 // The MIT License
-// 
-// Copyright (c) 2012 Gwendal Roué
-// 
+//
+// Copyright (c) 2013 Gwendal Roué
+//
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
 // in the Software without restriction, including without limitation the rights
 // to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be included in
 // all copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -22,128 +22,73 @@
 
 #import "PositionFilter.h"
 
-#pragma mark - PositionFilterItem declaration
-
-/**
- * PositionFilterItem's responsability is, given an array and an index, to
- * forward to the original item in the array all keys but:
- *
- * - position: returns the 1-based index of the item
- * - isOdd: returns YES if the position of the item is odd
- * - isFirst: returns YES if the item is at position 1
- *
- * All other keys are forwared to the original item.
- */
-@interface PositionFilterItem : NSObject
-@property (nonatomic, readonly) NSUInteger position;
-@property (nonatomic, readonly) BOOL isFirst;
-@property (nonatomic, readonly) BOOL isOdd;
-- (id)initWithObjectAtIndex:(NSUInteger)index inArray:(NSArray *)array;
-@end
-
-
-#pragma mark - PositionFilter
-
-// Documented in PositionFilter.h
 @implementation PositionFilter
 
 /**
- * GRMustacheFilter protocol required method
+ * The transformedValue: method is required by the GRMustacheFilter protocol.
+ * 
+ * Don't provide any type checking, and assume the filter argument is an array:
  */
-- (id)transformedValue:(id)object
+
+- (id)transformedValue:(NSArray *)array
 {
     /**
-     * Let's first validate the input: we can only filter arrays.
+     * We want to provide custom rendering of the array.
+     *
+     * So let's provide an object that does custom rendering.
      */
     
-    NSAssert([object isKindOfClass:[NSArray class]], @"Not an NSArray");
-    NSArray *array = (NSArray *)object;
-    
-    
-    /**
-     * Let's return a new array made of PositionFilterItem instances.
-     * They will provide the `position`, `isOdd` and `isFirst` keys while
-     * letting original array items provide the other keys.
-     */
-    
-    NSMutableArray *replacementArray = [NSMutableArray arrayWithCapacity:array.count];
-    [array enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
-        PositionFilterItem *item = [[PositionFilterItem alloc] initWithObjectAtIndex:idx inArray:array];
-        [replacementArray addObject:item];
+    return [GRMustache renderingObjectWithBlock:^NSString *(GRMustacheTag *tag, GRMustacheContext *context, BOOL *HTMLSafe, NSError *__autoreleasing *error) {
+       
+        /**
+         * We are going to render the tag once for each item. We need a buffer
+         * to store all those renderings:
+         */
+        
+        NSMutableString *buffer = [NSMutableString string];
+        
+        
+        /**
+         * For each item...
+         */
+        
+        [array enumerateObjectsUsingBlock:^(id item, NSUInteger index, BOOL *stop) {
+            
+            /**
+             * Have our "specials" keys enter the context stack:
+             */
+            
+            id specials = @{
+                @"position": @(index + 1),
+                @"isFirst" : @(index == 0),
+                @"isOdd" : @(index % 2 == 0),
+            };
+            GRMustacheContext *itemContext = [context contextByAddingObject:specials];
+            
+            
+            /**
+             * Have the item itself enter the context stack (so that the `name`
+             * key can render):
+             */
+            
+            itemContext = [itemContext contextByAddingObject:item];
+            
+            
+            /**
+             * Append the item rendering to our buffer:
+             */
+            
+            NSString *itemRendering = [tag renderContentWithContext:itemContext HTMLSafe:HTMLSafe error:error];
+            [buffer appendString:itemRendering];
+        }];
+        
+        
+        /**
+         * Done
+         */
+        
+        return buffer;
     }];
-    return replacementArray;
 }
 
 @end
-
-
-#pragma mark - PositionFilterItem implementation
-
-@implementation PositionFilterItem {
-    /**
-     * The original 0-based index and the array of original items are stored in
-     * ivars without any exposed property: we do not want GRMustache to render
-     * the unintended {{ index }} or {{ array }}.
-     */
-    NSUInteger _index;
-    NSArray *_array;
-}
-
-- (id)initWithObjectAtIndex:(NSUInteger)index inArray:(NSArray *)array
-{
-    self = [super init];
-    if (self) {
-        _index = index;
-        _array = array;
-    }
-    return self;
-}
-
-/**
- * The implementation of `description` is required so that whenever GRMustache
- * wants to render the original item itself (with a `{{ . }}` tag, for
- * instance).
- */
-- (NSString *)description
-{
-    id originalObject = [_array objectAtIndex:_index];
-    return [originalObject description];
-}
-
-/**
- * Support for `{{position}}`: return a 1-based index.
- */
-- (NSUInteger)position
-{
-    return _index + 1;
-}
-
-/**
- * Support for `{{#isFirst}}...{{/isFirst}}`: return YES if element is the first
- */
-- (BOOL)isFirst
-{
-    return _index == 0;
-}
-
-/**
- * Support for `{{#isOdd}}...{{/isOdd}}`: return YES if element's position is
- * odd.
- */
-- (BOOL)isOdd
-{
-    return (_index % 2) == 0;
-}
-
-/**
- * Support for other keys: forward to original array element
- */
-- (id)valueForUndefinedKey:(NSString *)key
-{
-    id originalObject = [_array objectAtIndex:_index];
-    return [originalObject valueForKey:key];
-}
-
-@end
-
-

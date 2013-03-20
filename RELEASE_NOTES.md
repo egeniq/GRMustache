@@ -3,6 +3,364 @@ GRMustache Release Notes
 
 You can compare the performances of GRMustache versions at https://github.com/groue/GRMustacheBenchmark.
 
+## v6.4.1
+
+Bugfixes:
+
+- Avoid leaked memory warnings (thanks [@oleganza](https://github.com/oleganza)).
+- The `localize` helper now lets you localize sections whose content contains `%@`.
+
+## v6.4.0
+
+### Integration in your Xcode project
+
+The GRMustache static libraries now require that you add the `-ObjC` option in the "Other Linker Flags" of your targets ([how to](http://developer.apple.com/library/mac/#qa/qa1490/_index.html)).
+
+### Configuration
+
+The [GRMustacheConfiguration](Guides/configuration.md) class now lets you specify a base rendering context, and the Mustache tag delimiters.
+
+### Standard Library
+
+The [standard library](Guides/standard_library.md) sports new services. Localization support is now built-in, as well as various escaping tools.
+
+### NSFormatter
+
+NSFormatter and subclasses such as NSDateFormatter and NSNumberFormatter are now first citizen of GRMustache. Check the [NSFormatter Guide](Guides/NSFormatter.md).
+
+
+## v6.3.0
+
+GRMustache does no longer raise an exception when a template can't evaluate a filter expression such as `{{ f(x) }}`.
+
+Instead, an error is returned, with new GRMustache error code `GRMustacheErrorCodeRenderingError`.
+
+
+## v6.2.0
+
+**Text templates**
+
+Text templates render text, and do not HTML-escape their input.
+
+Check the [HTML vs. Text Templates Guide](Guides/html_vs_text.md).
+
+## v6.1.4
+
+Garbage collection support.
+
+## v6.1.3
+
+The parser now rejects expressions identifiers that start with a reserved Mustache character: `{}<>&#^$/` (those are the characters that start Mustache tags).
+
+This will help the most daring of you who try to push Mustache off limits:
+
+- `{{ >foo }}` looks a lot like a partial tag, but is not. It will now yield a parse error (because `>foo` turns out to be an invalid expression for a variable tag).
+- `{{{#foo}}}...{{{/foo}}}` looks a lot like an "unescaped section tag", but there is no such tag in Mustache. This string will now yield a parse error (because `#foo` and `/foo` turn out to be invalid expressions for triple-mustache unescaped variable tags).
+
+## v6.1.2
+
+Improved template debugging: errors are logged when you do not handle them.
+
+## v6.1.1
+
+**[Performance improvements](https://github.com/groue/GRMustacheBenchmark)**
+
+## v6.1
+
+### "Else"
+
+You don't have to close a regular section if it is immediately followed by its inverted form: `{{#name}}...{{^name}}...{{/name}}`
+    
+The short form `{{#name}}...{{^}}...{{/}}` is accepted, as well as the "unless" form `{{^name}}...{{#}}...{{/}}`.
+
+
+## v6.0.1
+
+Robustness of protected contexts. Check the ["Protected namespaces"](Guides/protected_contexts.md#protected-namespaces) section of the Protected Contexts Guide.
+
+
+## v6.0.0
+
+### Major refactoring and simplification
+
+GRMustache has recently been suffering of overengineering and API bloat. GRMustache 6 drastically reduces the surface of the interface.
+
+**Removed APIs**:
+
+- `GRMustacheDynamicPartial`, `GRMustacheProxy`, `GRMustacheSectionTagHelper`, `GRMustacheVariableTagHelper`, and their companion classes have all been gathered in the `GRMustacheRendering` protocol, covered in the [Rendering Objects Guide](Guides/rendering_objects.md).
+
+- `GRMustacheInvocation` and `GRMustacheTemplateDelegate` have been replaced by `GRMustacheTagDelegate`, covered in the [Tag Delegates Guide](Guides/rendering_objects.md).
+
+- The `GRMustacheTemplate` and `GRMustacheTemplateRepository` classes have lost many methods that used to cripple the autocompletion menu of Xcode. All removed shortcut are still eventually available through template repositories.
+
+**New rendering engine behavior**:
+
+- The sections of overridable partials behave more like Ruby on Rails' `<% content_for(:foo) do %>...<% end %>`: multiple overriding sections are now concatenated, when GRMustache 5 used to render the last one only. See the [Partials Guide](Guides/partials.md).
+
+- [Filters](Guides/filters.md) are no longer provided in a separate container (the `renderObject:withFilters:` method is removed). All objects that enter the context stack can now provide filters (and supersede filters defined in parent contexts). You may want to check the [Protected Contexts Guide](Guides/protected_contexts.md) if you want to protect your filter keys.
+
+
+## v5.5.2
+
+**Bug fixes**
+
+[Variadic filters](Guides/filters.md) can now return filters, just as filters with a single argument.
+
+## v5.5.1
+
+**Niceties and bug fixes**
+
+The `count` method of NSArray, NSSet and NSOrderedSet can now be queried in templates: `{{collection.count}}` renders as expected, and `{{#collection.count}}...{{/}}` can conditionally render a section if and only if the collection is not empty. See [Guides/runtime/context_stack.md](Guides/runtime/context_stack.md#nsarray-nsset-nsorderedset) for a detailed explanation.
+
+[Variadic filters](Guides/filters.md) that return nil used to not play well with boolean sections.
+
+[GRMustacheProxy](Guides/proxies.md) cooperates with `NSUndefinedKeyException` prevention, and keeps its delegate quiet after you have invoked `[GRMustache preventNSUndefinedKeyExceptionAttack]`.
+
+[GRMustacheProxy](Guides/proxies.md) refuses `nil` delegate, since it can not pose as `nil`. You must use [NSNull null] instead.
+
+## v5.5
+
+### Variadic filters
+
+Filters can now take several arguments: `{{ f(a,b) }}`. Check [Guides/filters.md](Guides/filters.md).
+
+### GRMustacheProxy
+
+Proxies are a tool for the developer who wants to write reusable and robust filters, helpers, and template delegates that extend the abilities of the rendered data. Check [Guides/proxies.md](Guides/proxies.md).
+
+The [array indexes.md](Guides/sample_code/indexes.md) sample code now uses proxies. The visible benefit is that the sample code is shorter. It is also more robust. Before proxies were introduced, we used not to be able to properly render indexes for "special" array items such as NSNull, false booleans, or helpers. Proxies are really all about robustness.
+
+
+## v5.4.4
+
+- Fix a memory leak in [overridable partials](Guides/partials.md).
+- Until this version, GRMustache would not trigger delegate methods for objects conforming to both GRMustacheVariableHelper and GRMustacheTemplateDelegate protocols.
+
+## v5.4.3
+
+Until this version, GRMustache would not trigger section tag helpers, variable tag helpers and tag delegates in a few corner cases.
+
+## v5.4.2
+
+Until this version, filters could not return filters. This useless inconsistency is considered a bug, and has been fixed. Check [Guides/filters.md](Guides/filters.md).
+
+## v5.4.1
+
+Fix some corner cases in the handling of [overridable partials](Guides/partials.md), should your templates include conflicting overriding sections. Basically, the last one wins:
+
+`{{<layout}} {{$content}}Not rendered{{/content}} {{$content}}Rendered{{/content}} {{/layout}}`.
+
+
+## v5.4.0
+
+### Support for templates and partials stored in a hierarchy of directories
+
+When your templates are stored in a hierarchy of directories, you need to refer to [partial templates](Guides/partials.md) in both relative and absolute ways, depending on the context.
+
+Your [variable tag helpers](Guides/variable_tag_helpers.md) and your [section tag helpers](Guides/section_tag_helpers.md) will typically use absolute paths, in order to always include the same partial template, regardless of the hierarchical position of the templates that use them.
+
+Relative partial paths look like regular Mustache partial tags: `{{> header }}`, `{{> partials/header }}`.
+
+GRMustache v5.4.0 brings absolute paths, that start with a slash: `{{> /partials/header }}`. 
+
+The full story starts at [Guides/partials.md](Guides/partials.md#partials-in-the-file-system).
+
+## v5.3.0
+
+### API cleanup
+
+The introduction of variable tag helpers in v5.1.0 introduced many confusing APIs. Those are still there, but deprecated.
+
+No new feature has been added, but semantics have been much improved. Many thanks to [@pierlo](https://github.com/pierlo) for his help.
+
+**Helpers API changes**
+
+`GRMustacheVariableTagHelper` replaces `GRMustacheVariableHelper`. See [Guides/variable_tag_helpers.md](Guides/variable_tag_helpers.md).
+
+```objc
+@protocol GRMustacheVariableTagHelper<NSObject>
+@required
+- (NSString *)renderForVariableTagInContext:(GRMustacheVariableTagRenderingContext *)context;
+@end
+
+@interface GRMustacheVariableTagRenderingContext : NSObject
+- (NSString *)renderTemplateString:(NSString *)string error:(NSError **)outError;
+- (NSString *)renderTemplateNamed:(NSString *)name error:(NSError **)outError;
+@end
+```
+
+`GRMustacheSectionTagHelper` replaces `GRMustacheSectionHelper`. See [Guides/section_tag_helpers.md](Guides/section_tag_helpers.md).
+
+```objc
+@protocol GRMustacheSectionTagHelper<NSObject>
+@required
+- (NSString *)renderForSectionTagInContext:(GRMustacheSectionTagRenderingContext *)context;
+@end
+
+@interface GRMustacheSectionTagRenderingContext: NSObject
+@property (nonatomic, readonly) NSString *innerTemplateString;
+- (NSString *)render;
+- (NSString *)renderTemplateString:(NSString *)string error:(NSError **)outError;
+@end
+```
+
+**GRMustacheTemplateDelegate API changes**
+
+In the `GRMustacheInterpretation` enumeration, `GRMustacheSectionTagInterpretation` replaces `GRMustacheInterpretationSection`, and `GRMustacheVariableTagInterpretation` replaces `GRMustacheInterpretationVariable`.
+
+**GRMustacheTemplate API changes**
+
+`[GRMustacheTemplate renderObjectsFromArray:]` and `[GRMustacheTemplate renderObjectsFromArray:withFilters:]` replace `[GRMustacheTemplate renderObjectsInArray:]` and `[GRMustacheTemplate renderObjectsInArray:withFilters:]`.
+
+## v5.2.0
+
+**Overridable partials**
+
+Inspired by [hogan.js](http://twitter.github.com/hogan.js/) and [spullara/mustache.java](https://github.com/spullara/mustache.java), GRMustache now supports "template inheritance". Precisely, your templates can embed as many partials as before, but now you can override portions of those partials.
+
+Overridable partials are documented as [Guides/partials.md](Guides/partials.md).
+
+The [layout](../../tree/master/Guides/sample_code/layout) sample code has been updated to take profit of overridable partials. There is not much left of it :-).
+
+
+## v5.1.0
+
+### Dropped support for armv6
+
+libGRMustache5-iOS.a is now compiled with Xcode 4.5, and does not longer embed the armv6 slice.
+
+For armv6 support, use [GRMustache 5.0.1](https://github.com/groue/GRMustache/tree/v5.0.1).
+
+### Array rendering
+
+The Mustache specification does not specify how a collection of objects should be rendered. For instance, the rendering of `{{items}}` is unspecified if items is an array.
+
+GRMustache 5.1 renders an array as the concatenation of the rendering of its individual items.
+
+This makes GRMustache able to render `{{items}}` just as Ruby on Rails renders `<%= render @items %>`. Keep on reading.
+
+### Variable helpers and dynamic partials
+
+The library was missing support for "Mustache variable lambdas", that let you execute code when rendering a plain `{{variable}}` tag.
+
+Support for variable lambdas is there now, through the `GRMustacheVariableHelper` protocol.
+
+Variable helpers are the base for "dynamic partials", that is to say the ability to defer the choice of a template partial until the actual rendering. Now your context objects can choose which partial should be rendered.
+
+Variable helpers can also help objects being able to "render themselves", and have `{{item}}` and `{{items}}` rendering controlled by these items themselves.
+
+All of those new features are documented at [Guides/variable_helpers.md](Guides/variable_helpers.md).
+
+New APIs:
+
+```objc
+// The name of exceptions raised whenever the rendering could not be completed.
+extern NSString * const GRMustacheRenderingException;
+
+// Base protocol for "variable lambdas".
+@protocol GRMustacheVariableHelper<NSObject>
+@required
+- (NSString *)renderVariable:(GRMustacheVariable *)variable;
+@end
+
+// Convenience class in order to avoid implementing a full class that conforms
+// to the GRMustacheVariableHelper protocol
+@interface GRMustacheVariableHelper: NSObject<GRMustacheVariableHelper>
++ (id)helperWithBlock:(NSString *(^)(GRMustacheVariable* variable))block;
+@end
+
+// Convenience class for building variable helpers that render the content of a
+// template partial.
+@interface GRMustacheDynamicPartial: NSObject<GRMustacheVariableHelper>
++ (id)dynamicPartialWithName:(NSString *)name;
+@end
+
+// Allows you to implement variable helpers through the GRMustacheVariableHelper
+// protocol.
+@interface GRMustacheVariable : NSObject
+- (NSString *)renderTemplateString:(NSString *)string error:(NSError **)outError;
+- (NSString *)renderTemplateNamed:(NSString *)name error:(NSError **)outError;
+@end
+
+// This protocol is identical to the deprecated GRMustacheHelper protocol.
+@protocol GRMustacheSectionHelper<NSObject>
+@required
+- (NSString *)renderSection:(GRMustacheSection *)section;
+@end
+
+// This class is identical to the deprecated GRMustacheHelper class.
+@interface GRMustacheSectionHelper: NSObject<GRMustacheSectionHelper>
++ (id)helperWithBlock:(NSString *(^)(GRMustacheSection* section))block;
+@end
+```
+
+Deprecated APIs:
+
+```objc
+// Use GRMustacheRenderingException instead
+extern NSString * GRMustacheFilterException;
+
+// Use GRMustacheSectionHelper protocol instead
+@protocol GRMustacheHelper
+@end
+
+// Use GRMustacheSectionHelper class instead
+@interface GRMustacheHelper
+@end
+```
+
+
+## v5.0.1
+
+Bug fixes:
+
+- [Section delegates](Guides/delegate.md) used not to be given the rendered template as expected.
+- [Helpers](Guides/helpers.md) used not to be able to render partial templates when rendering alternate template strings.
+
+
+## v5.0.0
+
+**[Performance improvements](https://github.com/groue/GRMustacheBenchmark), and fix for flaws in the GRMustacheDelegate API.**
+
+Besides the removal of already deprecated methods, the changes introduced in this version are very unlikely to introduce incompatibilities in your code:
+
+- Dropped support for iOS3.
+- Before v5.0.0, [template delegates](Guides/delegate.md) could know that the value `Arthur` was provided by the key `name` when the tag `{{name}}` is rendered. Delegates are now only provided with the value.
+- Before v5.0.0, a tag containing a filter expression like `{{uppercase(name)}}` would have a template delegate invoked with the raw `Arthur` value, not the filter result: `ARTHUR`. In v5.0.0, delegate callbacks are given always given the value GRMustache is about to render.
+
+Removed APIs:
+
+```objc
+@interface GRMustacheInvocation : NSObject
+// Removed without deprecation warning
+@property (nonatomic, readonly) NSString *key;
+@end
+
+@interface GRMustacheSection: NSObject
+// Deprecated in v4.3.0
+@property (nonatomic, retain, readonly) id renderingContext;
+@end
+
+@interface GRMustacheTemplate: NSObject
+// Deprecated in v4.3.0
+- (NSString *)renderObjects:(id)object, ...;
+@end
+
+// Removed without deprecation warning
+GRMustacheInterpretationFilterArgument // was part of the GRMustacheInterpretation enum.
+
+@protocol GRMustacheTemplateDelegate<NSObject>
+// Deprecated in v4.1.0
+- (void)template:(GRMustacheTemplate *)template willRenderReturnValueOfInvocation:(GRMustacheInvocation *)invocation;
+- (void)template:(GRMustacheTemplate *)template didRenderReturnValueOfInvocation:(GRMustacheInvocation *)invocation;
+@end
+```
+
+
+## v4.3.4
+
+Restored compatibility with iOS3 and OSX6 (thanks [@Bertrand](https://github.com/Bertrand)).
+
 
 ## v4.3.3
 
@@ -409,11 +767,11 @@ Upgrade GRMustache, and get deprecation warnings when you use deprecated APIs. Y
 
 ## v1.10.2
 
-**Drastic rendering performance improvements**
+**[Performance improvements](https://github.com/groue/GRMustacheBenchmark)**
 
 ## v1.10.1
 
-**Rendering performance improvements**
+**[Performance improvements](https://github.com/groue/GRMustacheBenchmark)**
 
 ## v1.10
 
@@ -434,7 +792,7 @@ New protocol:
 ```objc
 @protocol GRMustacheHelper<NSObject>
 @required
-- (NSString *)renderSection:(GRMustacheSection *)section withContext:(id)context AVAILABLE_GRMUSTACHE_VERSION_1_9_AND_LATER;
+- (NSString *)renderSection:(GRMustacheSection *)section withContext:(id)context;
 @end
 ```
 

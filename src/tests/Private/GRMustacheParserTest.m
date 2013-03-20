@@ -1,6 +1,6 @@
 // The MIT License
 // 
-// Copyright (c) 2012 Gwendal Roué
+// Copyright (c) 2013 Gwendal Roué
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -25,6 +25,7 @@
 #import "GRMustacheIdentifierExpression_private.h"
 #import "GRMustacheScopedExpression_private.h"
 #import "GRMustacheFilteredExpression_private.h"
+#import "GRMustacheConfiguration_private.h"
 #import "GRMustacheError.h"
 
 
@@ -38,17 +39,26 @@
 
 @interface GRMustacheTokenRecorder : NSObject<GRMustacheParserDelegate> {
     NSError *_error;
+    GRMustacheToken *_lastToken;
     NSMutableArray *_tokenTypes;
-    NSMutableArray *_tokenValues;
+    NSMutableArray *_tokenTexts;
+    NSMutableArray *_tokenExpressions;
+    NSMutableArray *_tokenPartialNames;
+    NSMutableArray *_tokenPragmas;
 }
 @property (nonatomic, retain, readonly) NSError *error;
+@property (nonatomic, retain, readonly) GRMustacheToken *lastToken;
 @property (readonly) NSUInteger tokenCount;
 - (GRMustacheTokenType)tokenTypeAtIndex:(NSUInteger)index;
-- (id)tokenValueAtIndex:(NSUInteger)index;
+- (id)tokenTextAtIndex:(NSUInteger)index;
+- (id)tokenExpressionAtIndex:(NSUInteger)index;
+- (id)tokenPartialNameAtIndex:(NSUInteger)index;
+- (id)tokenPragmaAtIndex:(NSUInteger)index;
 @end
 
 @implementation GRMustacheTokenRecorder
 @synthesize error=_error;
+@synthesize lastToken=_lastToken;
 @dynamic tokenCount;
 
 - (id)init
@@ -56,15 +66,22 @@
     self = [super init];
     if (self) {
         _tokenTypes = [[NSMutableArray array] retain];
-        _tokenValues = [[NSMutableArray array] retain];
+        _tokenTexts = [[NSMutableArray array] retain];
+        _tokenExpressions = [[NSMutableArray array] retain];
+        _tokenPartialNames = [[NSMutableArray array] retain];
+        _tokenPragmas = [[NSMutableArray array] retain];
     }
     return self;
 }
 
 - (void)dealloc
 {
+    [_lastToken release];
     [_tokenTypes release];
-    [_tokenValues release];
+    [_tokenTexts release];
+    [_tokenExpressions release];
+    [_tokenPartialNames release];
+    [_tokenPragmas release];
     [_error release];
     [super dealloc];
 }
@@ -79,19 +96,57 @@
     return [(NSNumber *)[_tokenTypes objectAtIndex:index] intValue];
 }
 
-- (id)tokenValueAtIndex:(NSUInteger)index
+- (id)tokenTextAtIndex:(NSUInteger)index;
 {
-    return [_tokenValues objectAtIndex:index];
+    return [_tokenTexts objectAtIndex:index];
+}
+
+- (id)tokenExpressionAtIndex:(NSUInteger)index;
+{
+    return [_tokenExpressions objectAtIndex:index];
+}
+
+- (id)tokenPartialNameAtIndex:(NSUInteger)index;
+{
+    return [_tokenPartialNames objectAtIndex:index];
+}
+
+- (id)tokenPragmaAtIndex:(NSUInteger)index;
+{
+    return [_tokenPragmas objectAtIndex:index];
 }
 
 - (BOOL)parser:(GRMustacheParser *)parser shouldContinueAfterParsingToken:(GRMustacheToken *)token
 {
+    [_lastToken release];
+    _lastToken = [token retain];
+    
     [_tokenTypes addObject:[NSNumber numberWithInt:token.type]];
-    if (token.value.object) {
-        [_tokenValues addObject:token.value.object];
+    
+    if (token.text) {
+        [_tokenTexts addObject:token.text];
     } else {
-        [_tokenValues addObject:[NSNull null]];
+        [_tokenTexts addObject:[NSNull null]];
     }
+    
+    if (token.expression) {
+        [_tokenExpressions addObject:token.expression];
+    } else {
+        [_tokenExpressions addObject:[NSNull null]];
+    }
+    
+    if (token.partialName) {
+        [_tokenPartialNames addObject:token.partialName];
+    } else {
+        [_tokenPartialNames addObject:[NSNull null]];
+    }
+    
+    if (token.pragma) {
+        [_tokenPragmas addObject:token.pragma];
+    } else {
+        [_tokenPragmas addObject:[NSNull null]];
+    }
+    
     return YES;
 }
 
@@ -108,7 +163,7 @@
 - (void)setUp
 {
     tokenRecorder = [[GRMustacheTokenRecorder alloc] init];
-    parser = [[GRMustacheParser alloc] init];
+    parser = [[GRMustacheParser alloc] initWithConfiguration:[GRMustacheConfiguration defaultConfiguration]];
     parser.delegate = tokenRecorder;
 }
 
@@ -125,7 +180,7 @@
     STAssertNil(tokenRecorder.error, nil);
     STAssertEquals((NSUInteger)1, tokenRecorder.tokenCount, nil);
     STAssertEquals(GRMustacheTokenTypeText, [tokenRecorder tokenTypeAtIndex:0], nil);
-    STAssertEqualObjects(@"text", [tokenRecorder tokenValueAtIndex:0], nil);
+    STAssertEqualObjects(@"text", [tokenRecorder tokenTextAtIndex:0], nil);
 }
 
 - (void)testParserParsesCommentToken
@@ -135,7 +190,7 @@
     STAssertNil(tokenRecorder.error, nil);
     STAssertEquals((NSUInteger)1, tokenRecorder.tokenCount, nil);
     STAssertEquals(GRMustacheTokenTypeComment, [tokenRecorder tokenTypeAtIndex:0], nil);
-    STAssertEqualObjects(@"comment", [tokenRecorder tokenValueAtIndex:0], nil);
+    STAssertEqualObjects(@"comment", [tokenRecorder tokenTextAtIndex:0], nil);
 }
 
 - (void)testParserParsesEscapedVariableTokenWithSingleKey
@@ -146,7 +201,7 @@
     STAssertEquals((NSUInteger)1, tokenRecorder.tokenCount, nil);
     STAssertEquals(GRMustacheTokenTypeEscapedVariable, [tokenRecorder tokenTypeAtIndex:0], nil);
     GRMustacheIdentifierExpression *expression = [GRMustacheIdentifierExpression expressionWithIdentifier:@"name"];
-    STAssertEqualObjects(expression, [tokenRecorder tokenValueAtIndex:0], nil);
+    STAssertEqualObjects(expression, [tokenRecorder tokenExpressionAtIndex:0], nil);
 }
 
 - (void)testParserParsesEscapedVariableTokenWithCompoundKey
@@ -157,7 +212,7 @@
     STAssertEquals((NSUInteger)1, tokenRecorder.tokenCount, nil);
     STAssertEquals(GRMustacheTokenTypeEscapedVariable, [tokenRecorder tokenTypeAtIndex:0], nil);
     GRMustacheScopedExpression *expression = [GRMustacheScopedExpression expressionWithBaseExpression:[GRMustacheIdentifierExpression expressionWithIdentifier:@"foo"] scopeIdentifier:@"bar"];
-    STAssertEqualObjects(expression, [tokenRecorder tokenValueAtIndex:0], nil);
+    STAssertEqualObjects(expression, [tokenRecorder tokenExpressionAtIndex:0], nil);
 }
 
 - (void)testParserTrimsEscapedVariableTokenWithSingleKey
@@ -168,7 +223,7 @@
     STAssertEquals((NSUInteger)1, tokenRecorder.tokenCount, nil);
     STAssertEquals(GRMustacheTokenTypeEscapedVariable, [tokenRecorder tokenTypeAtIndex:0], nil);
     GRMustacheIdentifierExpression *expression = [GRMustacheIdentifierExpression expressionWithIdentifier:@"name"];
-    STAssertEqualObjects(expression, [tokenRecorder tokenValueAtIndex:0], nil);
+    STAssertEqualObjects(expression, [tokenRecorder tokenExpressionAtIndex:0], nil);
 }
 
 - (void)testParserTrimsEscapedVariableTokenWithCompoundKey
@@ -179,56 +234,56 @@
     STAssertEquals((NSUInteger)1, tokenRecorder.tokenCount, nil);
     STAssertEquals(GRMustacheTokenTypeEscapedVariable, [tokenRecorder tokenTypeAtIndex:0], nil);
     GRMustacheScopedExpression *expression = [GRMustacheScopedExpression expressionWithBaseExpression:[GRMustacheIdentifierExpression expressionWithIdentifier:@"foo"] scopeIdentifier:@"bar"];
-    STAssertEqualObjects(expression, [tokenRecorder tokenValueAtIndex:0], nil);
+    STAssertEqualObjects(expression, [tokenRecorder tokenExpressionAtIndex:0], nil);
 }
 
 - (void)testParserParsesEscapedVariableTokenWithFilter
 {
-    NSString *templateString = @"{{%FILTERS}}{{toto.titi(foo.bar)}}";
+    NSString *templateString = @"{{toto.titi(foo.bar)}}";
     [parser parseTemplateString:templateString templateID:nil];
     STAssertNil(tokenRecorder.error, nil);
-    STAssertEquals((NSUInteger)2, tokenRecorder.tokenCount, nil);
-    STAssertEquals(GRMustacheTokenTypeEscapedVariable, [tokenRecorder tokenTypeAtIndex:1], nil);
-    GRMustacheScopedExpression *parameterExpression = [GRMustacheScopedExpression expressionWithBaseExpression:[GRMustacheIdentifierExpression expressionWithIdentifier:@"foo"] scopeIdentifier:@"bar"];
+    STAssertEquals((NSUInteger)1, tokenRecorder.tokenCount, nil);
+    STAssertEquals(GRMustacheTokenTypeEscapedVariable, [tokenRecorder tokenTypeAtIndex:0], nil);
+    GRMustacheScopedExpression *argumentExpression = [GRMustacheScopedExpression expressionWithBaseExpression:[GRMustacheIdentifierExpression expressionWithIdentifier:@"foo"] scopeIdentifier:@"bar"];
     GRMustacheScopedExpression *filterExpression = [GRMustacheScopedExpression expressionWithBaseExpression:[GRMustacheIdentifierExpression expressionWithIdentifier:@"toto"] scopeIdentifier:@"titi"];
-    GRMustacheFilteredExpression *expression = [GRMustacheFilteredExpression expressionWithFilterExpression:filterExpression parameterExpression:parameterExpression];
-    STAssertEqualObjects(expression, [tokenRecorder tokenValueAtIndex:1], nil);
+    GRMustacheFilteredExpression *expression = [GRMustacheFilteredExpression expressionWithFilterExpression:filterExpression argumentExpression:argumentExpression];
+    STAssertEqualObjects(expression, [tokenRecorder tokenExpressionAtIndex:0], nil);
 }
 
 - (void)testParserTrimsEscapedVariableTokenWithFilter
 {
-    NSString *templateString = @"{{%FILTERS}}{{ \n\ttoto.titi \n\t( \n\tfoo.bar \n\t) \n\t}}";
+    NSString *templateString = @"{{ \n\ttoto.titi \n\t( \n\tfoo.bar \n\t) \n\t}}";
     [parser parseTemplateString:templateString templateID:nil];
     STAssertNil(tokenRecorder.error, nil);
-    STAssertEquals((NSUInteger)2, tokenRecorder.tokenCount, nil);
-    STAssertEquals(GRMustacheTokenTypeEscapedVariable, [tokenRecorder tokenTypeAtIndex:1], nil);
-    GRMustacheScopedExpression *parameterExpression = [GRMustacheScopedExpression expressionWithBaseExpression:[GRMustacheIdentifierExpression expressionWithIdentifier:@"foo"] scopeIdentifier:@"bar"];
+    STAssertEquals((NSUInteger)1, tokenRecorder.tokenCount, nil);
+    STAssertEquals(GRMustacheTokenTypeEscapedVariable, [tokenRecorder tokenTypeAtIndex:0], nil);
+    GRMustacheScopedExpression *argumentExpression = [GRMustacheScopedExpression expressionWithBaseExpression:[GRMustacheIdentifierExpression expressionWithIdentifier:@"foo"] scopeIdentifier:@"bar"];
     GRMustacheScopedExpression *filterExpression = [GRMustacheScopedExpression expressionWithBaseExpression:[GRMustacheIdentifierExpression expressionWithIdentifier:@"toto"] scopeIdentifier:@"titi"];
-    GRMustacheFilteredExpression *expression = [GRMustacheFilteredExpression expressionWithFilterExpression:filterExpression parameterExpression:parameterExpression];
-    STAssertEqualObjects(expression, [tokenRecorder tokenValueAtIndex:1], nil);
+    GRMustacheFilteredExpression *expression = [GRMustacheFilteredExpression expressionWithFilterExpression:filterExpression argumentExpression:argumentExpression];
+    STAssertEqualObjects(expression, [tokenRecorder tokenExpressionAtIndex:0], nil);
 }
 
 - (void)testParserParsesEscapedVariableTokenWithComplexExpression
 {
-    NSString *templateString = @"{{%FILTERS}}{{ a.b ( c.d ( e.f ) .g.h ).i.j }}";
+    NSString *templateString = @"{{ a.b ( c.d ( e.f ) .g.h ).i.j }}";
     [parser parseTemplateString:templateString templateID:nil];
     STAssertNil(tokenRecorder.error, nil);
-    STAssertEquals((NSUInteger)2, tokenRecorder.tokenCount, nil);
-    STAssertEquals(GRMustacheTokenTypeEscapedVariable, [tokenRecorder tokenTypeAtIndex:1], nil);
-    id<GRMustacheExpression> expression_e = [GRMustacheIdentifierExpression expressionWithIdentifier:@"e"];
-    id<GRMustacheExpression> expression_ef = [GRMustacheScopedExpression expressionWithBaseExpression:expression_e scopeIdentifier:@"f"];
-    id<GRMustacheExpression> expression_c = [GRMustacheIdentifierExpression expressionWithIdentifier:@"c"];
-    id<GRMustacheExpression> expression_cd = [GRMustacheScopedExpression expressionWithBaseExpression:expression_c scopeIdentifier:@"d"];
-    id<GRMustacheExpression> expression_cdef = [GRMustacheFilteredExpression expressionWithFilterExpression:expression_cd parameterExpression:expression_ef];
-    id<GRMustacheExpression> expression_cdefg = [GRMustacheScopedExpression expressionWithBaseExpression:expression_cdef scopeIdentifier:@"g"];
-    id<GRMustacheExpression> expression_cdefgh = [GRMustacheScopedExpression expressionWithBaseExpression:expression_cdefg scopeIdentifier:@"h"];
-    id<GRMustacheExpression> expression_a = [GRMustacheIdentifierExpression expressionWithIdentifier:@"a"];
-    id<GRMustacheExpression> expression_ab = [GRMustacheScopedExpression expressionWithBaseExpression:expression_a scopeIdentifier:@"b"];
-    id<GRMustacheExpression> expression_abcdefgh = [GRMustacheFilteredExpression expressionWithFilterExpression:expression_ab parameterExpression:expression_cdefgh];
-    id<GRMustacheExpression> expression_abcdefghi = [GRMustacheScopedExpression expressionWithBaseExpression:expression_abcdefgh scopeIdentifier:@"i"];
-    id<GRMustacheExpression> expression_abcdefghij = [GRMustacheScopedExpression expressionWithBaseExpression:expression_abcdefghi scopeIdentifier:@"j"];
+    STAssertEquals((NSUInteger)1, tokenRecorder.tokenCount, nil);
+    STAssertEquals(GRMustacheTokenTypeEscapedVariable, [tokenRecorder tokenTypeAtIndex:0], nil);
+    GRMustacheExpression *expression_e = [GRMustacheIdentifierExpression expressionWithIdentifier:@"e"];
+    GRMustacheExpression *expression_ef = [GRMustacheScopedExpression expressionWithBaseExpression:expression_e scopeIdentifier:@"f"];
+    GRMustacheExpression *expression_c = [GRMustacheIdentifierExpression expressionWithIdentifier:@"c"];
+    GRMustacheExpression *expression_cd = [GRMustacheScopedExpression expressionWithBaseExpression:expression_c scopeIdentifier:@"d"];
+    GRMustacheExpression *expression_cdef = [GRMustacheFilteredExpression expressionWithFilterExpression:expression_cd argumentExpression:expression_ef];
+    GRMustacheExpression *expression_cdefg = [GRMustacheScopedExpression expressionWithBaseExpression:expression_cdef scopeIdentifier:@"g"];
+    GRMustacheExpression *expression_cdefgh = [GRMustacheScopedExpression expressionWithBaseExpression:expression_cdefg scopeIdentifier:@"h"];
+    GRMustacheExpression *expression_a = [GRMustacheIdentifierExpression expressionWithIdentifier:@"a"];
+    GRMustacheExpression *expression_ab = [GRMustacheScopedExpression expressionWithBaseExpression:expression_a scopeIdentifier:@"b"];
+    GRMustacheExpression *expression_abcdefgh = [GRMustacheFilteredExpression expressionWithFilterExpression:expression_ab argumentExpression:expression_cdefgh];
+    GRMustacheExpression *expression_abcdefghi = [GRMustacheScopedExpression expressionWithBaseExpression:expression_abcdefgh scopeIdentifier:@"i"];
+    GRMustacheExpression *expression_abcdefghij = [GRMustacheScopedExpression expressionWithBaseExpression:expression_abcdefghi scopeIdentifier:@"j"];
     
-    STAssertEqualObjects(expression_abcdefghij, [tokenRecorder tokenValueAtIndex:1], nil);
+    STAssertEqualObjects(expression_abcdefghij, [tokenRecorder tokenExpressionAtIndex:0], nil);
 }
 
 - (void)testParserParsesUnescapedVariableTokenWithThreeMustacheWithSingleKey
@@ -239,7 +294,7 @@
     STAssertEquals((NSUInteger)1, tokenRecorder.tokenCount, nil);
     STAssertEquals(GRMustacheTokenTypeUnescapedVariable, [tokenRecorder tokenTypeAtIndex:0], nil);
     GRMustacheIdentifierExpression *expression = [GRMustacheIdentifierExpression expressionWithIdentifier:@"name"];
-    STAssertEqualObjects(expression, [tokenRecorder tokenValueAtIndex:0], nil);
+    STAssertEqualObjects(expression, [tokenRecorder tokenExpressionAtIndex:0], nil);
 }
 
 - (void)testParserParsesUnescapedVariableTokenWithThreeMustacheWithCompoundKey
@@ -250,7 +305,7 @@
     STAssertEquals((NSUInteger)1, tokenRecorder.tokenCount, nil);
     STAssertEquals(GRMustacheTokenTypeUnescapedVariable, [tokenRecorder tokenTypeAtIndex:0], nil);
     GRMustacheScopedExpression *expression = [GRMustacheScopedExpression expressionWithBaseExpression:[GRMustacheIdentifierExpression expressionWithIdentifier:@"foo"] scopeIdentifier:@"bar"];
-    STAssertEqualObjects(expression, [tokenRecorder tokenValueAtIndex:0], nil);
+    STAssertEqualObjects(expression, [tokenRecorder tokenExpressionAtIndex:0], nil);
 }
 
 - (void)testParserTrimsUnescapedVariableTokenWithThreeMustacheWithSingleKey
@@ -261,7 +316,7 @@
     STAssertEquals((NSUInteger)1, tokenRecorder.tokenCount, nil);
     STAssertEquals(GRMustacheTokenTypeUnescapedVariable, [tokenRecorder tokenTypeAtIndex:0], nil);
     GRMustacheIdentifierExpression *expression = [GRMustacheIdentifierExpression expressionWithIdentifier:@"name"];
-    STAssertEqualObjects(expression, [tokenRecorder tokenValueAtIndex:0], nil);
+    STAssertEqualObjects(expression, [tokenRecorder tokenExpressionAtIndex:0], nil);
 }
 
 - (void)testParserTrimsUnescapedVariableTokenWithThreeMustacheWithCompoundKey
@@ -272,33 +327,33 @@
     STAssertEquals((NSUInteger)1, tokenRecorder.tokenCount, nil);
     STAssertEquals(GRMustacheTokenTypeUnescapedVariable, [tokenRecorder tokenTypeAtIndex:0], nil);
     GRMustacheScopedExpression *expression = [GRMustacheScopedExpression expressionWithBaseExpression:[GRMustacheIdentifierExpression expressionWithIdentifier:@"foo"] scopeIdentifier:@"bar"];
-    STAssertEqualObjects(expression, [tokenRecorder tokenValueAtIndex:0], nil);
+    STAssertEqualObjects(expression, [tokenRecorder tokenExpressionAtIndex:0], nil);
 }
 
 - (void)testParserParsesUnescapedVariableTokenWithThreeMustacheWithFilter
 {
-    NSString *templateString = @"{{%FILTERS}}{{{toto.titi(foo.bar)}}}";
+    NSString *templateString = @"{{{toto.titi(foo.bar)}}}";
     [parser parseTemplateString:templateString templateID:nil];
     STAssertNil(tokenRecorder.error, nil);
-    STAssertEquals((NSUInteger)2, tokenRecorder.tokenCount, nil);
-    STAssertEquals(GRMustacheTokenTypeUnescapedVariable, [tokenRecorder tokenTypeAtIndex:1], nil);
-    GRMustacheScopedExpression *parameterExpression = [GRMustacheScopedExpression expressionWithBaseExpression:[GRMustacheIdentifierExpression expressionWithIdentifier:@"foo"] scopeIdentifier:@"bar"];
+    STAssertEquals((NSUInteger)1, tokenRecorder.tokenCount, nil);
+    STAssertEquals(GRMustacheTokenTypeUnescapedVariable, [tokenRecorder tokenTypeAtIndex:0], nil);
+    GRMustacheScopedExpression *argumentExpression = [GRMustacheScopedExpression expressionWithBaseExpression:[GRMustacheIdentifierExpression expressionWithIdentifier:@"foo"] scopeIdentifier:@"bar"];
     GRMustacheScopedExpression *filterExpression = [GRMustacheScopedExpression expressionWithBaseExpression:[GRMustacheIdentifierExpression expressionWithIdentifier:@"toto"] scopeIdentifier:@"titi"];
-    GRMustacheFilteredExpression *expression = [GRMustacheFilteredExpression expressionWithFilterExpression:filterExpression parameterExpression:parameterExpression];
-    STAssertEqualObjects(expression, [tokenRecorder tokenValueAtIndex:1], nil);
+    GRMustacheFilteredExpression *expression = [GRMustacheFilteredExpression expressionWithFilterExpression:filterExpression argumentExpression:argumentExpression];
+    STAssertEqualObjects(expression, [tokenRecorder tokenExpressionAtIndex:0], nil);
 }
 
 - (void)testParserTrimsUnescapedVariableTokenWithThreeMustacheWithFilter
 {
-    NSString *templateString = @"{{%FILTERS}}{{{ \n\ttoto.titi \n\t( \n\tfoo.bar \n\t) \n\t}}}";
+    NSString *templateString = @"{{{ \n\ttoto.titi \n\t( \n\tfoo.bar \n\t) \n\t}}}";
     [parser parseTemplateString:templateString templateID:nil];
     STAssertNil(tokenRecorder.error, nil);
-    STAssertEquals((NSUInteger)2, tokenRecorder.tokenCount, nil);
-    STAssertEquals(GRMustacheTokenTypeUnescapedVariable, [tokenRecorder tokenTypeAtIndex:1], nil);
-    GRMustacheScopedExpression *parameterExpression = [GRMustacheScopedExpression expressionWithBaseExpression:[GRMustacheIdentifierExpression expressionWithIdentifier:@"foo"] scopeIdentifier:@"bar"];
+    STAssertEquals((NSUInteger)1, tokenRecorder.tokenCount, nil);
+    STAssertEquals(GRMustacheTokenTypeUnescapedVariable, [tokenRecorder tokenTypeAtIndex:0], nil);
+    GRMustacheScopedExpression *argumentExpression = [GRMustacheScopedExpression expressionWithBaseExpression:[GRMustacheIdentifierExpression expressionWithIdentifier:@"foo"] scopeIdentifier:@"bar"];
     GRMustacheScopedExpression *filterExpression = [GRMustacheScopedExpression expressionWithBaseExpression:[GRMustacheIdentifierExpression expressionWithIdentifier:@"toto"] scopeIdentifier:@"titi"];
-    GRMustacheFilteredExpression *expression = [GRMustacheFilteredExpression expressionWithFilterExpression:filterExpression parameterExpression:parameterExpression];
-    STAssertEqualObjects(expression, [tokenRecorder tokenValueAtIndex:1], nil);
+    GRMustacheFilteredExpression *expression = [GRMustacheFilteredExpression expressionWithFilterExpression:filterExpression argumentExpression:argumentExpression];
+    STAssertEqualObjects(expression, [tokenRecorder tokenExpressionAtIndex:0], nil);
 }
 
 - (void)testParserParsesUnescapedVariableTokenWithAmpersandWithSingleKey
@@ -309,7 +364,7 @@
     STAssertEquals((NSUInteger)1, tokenRecorder.tokenCount, nil);
     STAssertEquals(GRMustacheTokenTypeUnescapedVariable, [tokenRecorder tokenTypeAtIndex:0], nil);
     GRMustacheIdentifierExpression *expression = [GRMustacheIdentifierExpression expressionWithIdentifier:@"name"];
-    STAssertEqualObjects(expression, [tokenRecorder tokenValueAtIndex:0], nil);
+    STAssertEqualObjects(expression, [tokenRecorder tokenExpressionAtIndex:0], nil);
 }
 
 - (void)testParserParsesUnescapedVariableTokenWithAmpersandWithCompoundKey
@@ -320,7 +375,7 @@
     STAssertEquals((NSUInteger)1, tokenRecorder.tokenCount, nil);
     STAssertEquals(GRMustacheTokenTypeUnescapedVariable, [tokenRecorder tokenTypeAtIndex:0], nil);
     GRMustacheScopedExpression *expression = [GRMustacheScopedExpression expressionWithBaseExpression:[GRMustacheIdentifierExpression expressionWithIdentifier:@"foo"] scopeIdentifier:@"bar"];
-    STAssertEqualObjects(expression, [tokenRecorder tokenValueAtIndex:0], nil);
+    STAssertEqualObjects(expression, [tokenRecorder tokenExpressionAtIndex:0], nil);
 }
 
 - (void)testParserTrimsUnescapedVariableTokenWithAmpersandWithSingleKey
@@ -331,7 +386,7 @@
     STAssertEquals((NSUInteger)1, tokenRecorder.tokenCount, nil);
     STAssertEquals(GRMustacheTokenTypeUnescapedVariable, [tokenRecorder tokenTypeAtIndex:0], nil);
     GRMustacheIdentifierExpression *expression = [GRMustacheIdentifierExpression expressionWithIdentifier:@"name"];
-    STAssertEqualObjects(expression, [tokenRecorder tokenValueAtIndex:0], nil);
+    STAssertEqualObjects(expression, [tokenRecorder tokenExpressionAtIndex:0], nil);
 }
 
 - (void)testParserTrimsUnescapedVariableTokenWithAmpersandWithCompoundKey
@@ -342,33 +397,33 @@
     STAssertEquals((NSUInteger)1, tokenRecorder.tokenCount, nil);
     STAssertEquals(GRMustacheTokenTypeUnescapedVariable, [tokenRecorder tokenTypeAtIndex:0], nil);
     GRMustacheScopedExpression *expression = [GRMustacheScopedExpression expressionWithBaseExpression:[GRMustacheIdentifierExpression expressionWithIdentifier:@"foo"] scopeIdentifier:@"bar"];
-    STAssertEqualObjects(expression, [tokenRecorder tokenValueAtIndex:0], nil);
+    STAssertEqualObjects(expression, [tokenRecorder tokenExpressionAtIndex:0], nil);
 }
 
 - (void)testParserParsesUnescapedVariableTokenWithAmpersandWithFilter
 {
-    NSString *templateString = @"{{%FILTERS}}{{{toto.titi(foo.bar)}}}";
+    NSString *templateString = @"{{{toto.titi(foo.bar)}}}";
     [parser parseTemplateString:templateString templateID:nil];
     STAssertNil(tokenRecorder.error, nil);
-    STAssertEquals((NSUInteger)2, tokenRecorder.tokenCount, nil);
-    STAssertEquals(GRMustacheTokenTypeUnescapedVariable, [tokenRecorder tokenTypeAtIndex:1], nil);
-    GRMustacheScopedExpression *parameterExpression = [GRMustacheScopedExpression expressionWithBaseExpression:[GRMustacheIdentifierExpression expressionWithIdentifier:@"foo"] scopeIdentifier:@"bar"];
+    STAssertEquals((NSUInteger)1, tokenRecorder.tokenCount, nil);
+    STAssertEquals(GRMustacheTokenTypeUnescapedVariable, [tokenRecorder tokenTypeAtIndex:0], nil);
+    GRMustacheScopedExpression *argumentExpression = [GRMustacheScopedExpression expressionWithBaseExpression:[GRMustacheIdentifierExpression expressionWithIdentifier:@"foo"] scopeIdentifier:@"bar"];
     GRMustacheScopedExpression *filterExpression = [GRMustacheScopedExpression expressionWithBaseExpression:[GRMustacheIdentifierExpression expressionWithIdentifier:@"toto"] scopeIdentifier:@"titi"];
-    GRMustacheFilteredExpression *expression = [GRMustacheFilteredExpression expressionWithFilterExpression:filterExpression parameterExpression:parameterExpression];
-    STAssertEqualObjects(expression, [tokenRecorder tokenValueAtIndex:1], nil);
+    GRMustacheFilteredExpression *expression = [GRMustacheFilteredExpression expressionWithFilterExpression:filterExpression argumentExpression:argumentExpression];
+    STAssertEqualObjects(expression, [tokenRecorder tokenExpressionAtIndex:0], nil);
 }
 
 - (void)testParserTrimsUnescapedVariableTokenWithAmpersandWithFilter
 {
-    NSString *templateString = @"{{%FILTERS}}{{{ \n\ttoto.titi \n\t( \n\tfoo.bar \n\t) \n\t}}}";
+    NSString *templateString = @"{{{ \n\ttoto.titi \n\t( \n\tfoo.bar \n\t) \n\t}}}";
     [parser parseTemplateString:templateString templateID:nil];
     STAssertNil(tokenRecorder.error, nil);
-    STAssertEquals((NSUInteger)2, tokenRecorder.tokenCount, nil);
-    STAssertEquals(GRMustacheTokenTypeUnescapedVariable, [tokenRecorder tokenTypeAtIndex:1], nil);
-    GRMustacheScopedExpression *parameterExpression = [GRMustacheScopedExpression expressionWithBaseExpression:[GRMustacheIdentifierExpression expressionWithIdentifier:@"foo"] scopeIdentifier:@"bar"];
+    STAssertEquals((NSUInteger)1, tokenRecorder.tokenCount, nil);
+    STAssertEquals(GRMustacheTokenTypeUnescapedVariable, [tokenRecorder tokenTypeAtIndex:0], nil);
+    GRMustacheScopedExpression *argumentExpression = [GRMustacheScopedExpression expressionWithBaseExpression:[GRMustacheIdentifierExpression expressionWithIdentifier:@"foo"] scopeIdentifier:@"bar"];
     GRMustacheScopedExpression *filterExpression = [GRMustacheScopedExpression expressionWithBaseExpression:[GRMustacheIdentifierExpression expressionWithIdentifier:@"toto"] scopeIdentifier:@"titi"];
-    GRMustacheFilteredExpression *expression = [GRMustacheFilteredExpression expressionWithFilterExpression:filterExpression parameterExpression:parameterExpression];
-    STAssertEqualObjects(expression, [tokenRecorder tokenValueAtIndex:1], nil);
+    GRMustacheFilteredExpression *expression = [GRMustacheFilteredExpression expressionWithFilterExpression:filterExpression argumentExpression:argumentExpression];
+    STAssertEqualObjects(expression, [tokenRecorder tokenExpressionAtIndex:0], nil);
 }
 
 - (void)testParserParsesSectionOpeningTokenWithSingleKey
@@ -379,7 +434,7 @@
     STAssertEquals((NSUInteger)1, tokenRecorder.tokenCount, nil);
     STAssertEquals(GRMustacheTokenTypeSectionOpening, [tokenRecorder tokenTypeAtIndex:0], nil);
     GRMustacheIdentifierExpression *expression = [GRMustacheIdentifierExpression expressionWithIdentifier:@"name"];
-    STAssertEqualObjects(expression, [tokenRecorder tokenValueAtIndex:0], nil);
+    STAssertEqualObjects(expression, [tokenRecorder tokenExpressionAtIndex:0], nil);
 }
 
 - (void)testParserParsesSectionOpeningTokenWithCompoundKey
@@ -390,7 +445,7 @@
     STAssertEquals((NSUInteger)1, tokenRecorder.tokenCount, nil);
     STAssertEquals(GRMustacheTokenTypeSectionOpening, [tokenRecorder tokenTypeAtIndex:0], nil);
     GRMustacheScopedExpression *expression = [GRMustacheScopedExpression expressionWithBaseExpression:[GRMustacheIdentifierExpression expressionWithIdentifier:@"foo"] scopeIdentifier:@"bar"];
-    STAssertEqualObjects(expression, [tokenRecorder tokenValueAtIndex:0], nil);
+    STAssertEqualObjects(expression, [tokenRecorder tokenExpressionAtIndex:0], nil);
 }
 
 - (void)testParserTrimsSectionOpeningTokenWithSingleKey
@@ -401,7 +456,7 @@
     STAssertEquals((NSUInteger)1, tokenRecorder.tokenCount, nil);
     STAssertEquals(GRMustacheTokenTypeSectionOpening, [tokenRecorder tokenTypeAtIndex:0], nil);
     GRMustacheIdentifierExpression *expression = [GRMustacheIdentifierExpression expressionWithIdentifier:@"name"];
-    STAssertEqualObjects(expression, [tokenRecorder tokenValueAtIndex:0], nil);
+    STAssertEqualObjects(expression, [tokenRecorder tokenExpressionAtIndex:0], nil);
 }
 
 - (void)testParserTrimsSectionOpeningTokenWithCompoundKey
@@ -412,33 +467,33 @@
     STAssertEquals((NSUInteger)1, tokenRecorder.tokenCount, nil);
     STAssertEquals(GRMustacheTokenTypeSectionOpening, [tokenRecorder tokenTypeAtIndex:0], nil);
     GRMustacheScopedExpression *expression = [GRMustacheScopedExpression expressionWithBaseExpression:[GRMustacheIdentifierExpression expressionWithIdentifier:@"foo"] scopeIdentifier:@"bar"];
-    STAssertEqualObjects(expression, [tokenRecorder tokenValueAtIndex:0], nil);
+    STAssertEqualObjects(expression, [tokenRecorder tokenExpressionAtIndex:0], nil);
 }
 
 - (void)testParserParsesSectionOpeningTokenWithFilter
 {
-    NSString *templateString = @"{{%FILTERS}}{{#toto.titi(foo.bar)}}";
+    NSString *templateString = @"{{#toto.titi(foo.bar)}}";
     [parser parseTemplateString:templateString templateID:nil];
     STAssertNil(tokenRecorder.error, nil);
-    STAssertEquals((NSUInteger)2, tokenRecorder.tokenCount, nil);
-    STAssertEquals(GRMustacheTokenTypeSectionOpening, [tokenRecorder tokenTypeAtIndex:1], nil);
-    GRMustacheScopedExpression *parameterExpression = [GRMustacheScopedExpression expressionWithBaseExpression:[GRMustacheIdentifierExpression expressionWithIdentifier:@"foo"] scopeIdentifier:@"bar"];
+    STAssertEquals((NSUInteger)1, tokenRecorder.tokenCount, nil);
+    STAssertEquals(GRMustacheTokenTypeSectionOpening, [tokenRecorder tokenTypeAtIndex:0], nil);
+    GRMustacheScopedExpression *argumentExpression = [GRMustacheScopedExpression expressionWithBaseExpression:[GRMustacheIdentifierExpression expressionWithIdentifier:@"foo"] scopeIdentifier:@"bar"];
     GRMustacheScopedExpression *filterExpression = [GRMustacheScopedExpression expressionWithBaseExpression:[GRMustacheIdentifierExpression expressionWithIdentifier:@"toto"] scopeIdentifier:@"titi"];
-    GRMustacheFilteredExpression *expression = [GRMustacheFilteredExpression expressionWithFilterExpression:filterExpression parameterExpression:parameterExpression];
-    STAssertEqualObjects(expression, [tokenRecorder tokenValueAtIndex:1], nil);
+    GRMustacheFilteredExpression *expression = [GRMustacheFilteredExpression expressionWithFilterExpression:filterExpression argumentExpression:argumentExpression];
+    STAssertEqualObjects(expression, [tokenRecorder tokenExpressionAtIndex:0], nil);
 }
 
 - (void)testParserTrimsSectionOpeningTokenWithFilter
 {
-    NSString *templateString = @"{{%FILTERS}}{{# \n\ttoto.titi \n\t( \n\tfoo.bar \n\t) \n\t}}";
+    NSString *templateString = @"{{# \n\ttoto.titi \n\t( \n\tfoo.bar \n\t) \n\t}}";
     [parser parseTemplateString:templateString templateID:nil];
     STAssertNil(tokenRecorder.error, nil);
-    STAssertEquals((NSUInteger)2, tokenRecorder.tokenCount, nil);
-    STAssertEquals(GRMustacheTokenTypeSectionOpening, [tokenRecorder tokenTypeAtIndex:1], nil);
-    GRMustacheScopedExpression *parameterExpression = [GRMustacheScopedExpression expressionWithBaseExpression:[GRMustacheIdentifierExpression expressionWithIdentifier:@"foo"] scopeIdentifier:@"bar"];
+    STAssertEquals((NSUInteger)1, tokenRecorder.tokenCount, nil);
+    STAssertEquals(GRMustacheTokenTypeSectionOpening, [tokenRecorder tokenTypeAtIndex:0], nil);
+    GRMustacheScopedExpression *argumentExpression = [GRMustacheScopedExpression expressionWithBaseExpression:[GRMustacheIdentifierExpression expressionWithIdentifier:@"foo"] scopeIdentifier:@"bar"];
     GRMustacheScopedExpression *filterExpression = [GRMustacheScopedExpression expressionWithBaseExpression:[GRMustacheIdentifierExpression expressionWithIdentifier:@"toto"] scopeIdentifier:@"titi"];
-    GRMustacheFilteredExpression *expression = [GRMustacheFilteredExpression expressionWithFilterExpression:filterExpression parameterExpression:parameterExpression];
-    STAssertEqualObjects(expression, [tokenRecorder tokenValueAtIndex:1], nil);
+    GRMustacheFilteredExpression *expression = [GRMustacheFilteredExpression expressionWithFilterExpression:filterExpression argumentExpression:argumentExpression];
+    STAssertEqualObjects(expression, [tokenRecorder tokenExpressionAtIndex:0], nil);
 }
 
 - (void)testParserParsesInvertedSectionOpeningTokenWithSingleKey
@@ -449,7 +504,7 @@
     STAssertEquals((NSUInteger)1, tokenRecorder.tokenCount, nil);
     STAssertEquals(GRMustacheTokenTypeInvertedSectionOpening, [tokenRecorder tokenTypeAtIndex:0], nil);
     GRMustacheIdentifierExpression *expression = [GRMustacheIdentifierExpression expressionWithIdentifier:@"name"];
-    STAssertEqualObjects(expression, [tokenRecorder tokenValueAtIndex:0], nil);
+    STAssertEqualObjects(expression, [tokenRecorder tokenExpressionAtIndex:0], nil);
 }
 
 - (void)testParserParsesInvertedSectionOpeningTokenWithCompoundKey
@@ -460,7 +515,7 @@
     STAssertEquals((NSUInteger)1, tokenRecorder.tokenCount, nil);
     STAssertEquals(GRMustacheTokenTypeInvertedSectionOpening, [tokenRecorder tokenTypeAtIndex:0], nil);
     GRMustacheScopedExpression *expression = [GRMustacheScopedExpression expressionWithBaseExpression:[GRMustacheIdentifierExpression expressionWithIdentifier:@"foo"] scopeIdentifier:@"bar"];
-    STAssertEqualObjects(expression, [tokenRecorder tokenValueAtIndex:0], nil);
+    STAssertEqualObjects(expression, [tokenRecorder tokenExpressionAtIndex:0], nil);
 }
 
 - (void)testParserTrimsInvertedSectionOpeningTokenWithSingleKey
@@ -471,7 +526,7 @@
     STAssertEquals((NSUInteger)1, tokenRecorder.tokenCount, nil);
     STAssertEquals(GRMustacheTokenTypeInvertedSectionOpening, [tokenRecorder tokenTypeAtIndex:0], nil);
     GRMustacheIdentifierExpression *expression = [GRMustacheIdentifierExpression expressionWithIdentifier:@"name"];
-    STAssertEqualObjects(expression, [tokenRecorder tokenValueAtIndex:0], nil);
+    STAssertEqualObjects(expression, [tokenRecorder tokenExpressionAtIndex:0], nil);
 }
 
 - (void)testParserTrimsInvertedSectionOpeningTokenWithCompoundKey
@@ -482,33 +537,33 @@
     STAssertEquals((NSUInteger)1, tokenRecorder.tokenCount, nil);
     STAssertEquals(GRMustacheTokenTypeInvertedSectionOpening, [tokenRecorder tokenTypeAtIndex:0], nil);
     GRMustacheScopedExpression *expression = [GRMustacheScopedExpression expressionWithBaseExpression:[GRMustacheIdentifierExpression expressionWithIdentifier:@"foo"] scopeIdentifier:@"bar"];
-    STAssertEqualObjects(expression, [tokenRecorder tokenValueAtIndex:0], nil);
+    STAssertEqualObjects(expression, [tokenRecorder tokenExpressionAtIndex:0], nil);
 }
 
 - (void)testParserParsesInvertedSectionOpeningTokenWithFilter
 {
-    NSString *templateString = @"{{%FILTERS}}{{^toto.titi(foo.bar)}}";
+    NSString *templateString = @"{{^toto.titi(foo.bar)}}";
     [parser parseTemplateString:templateString templateID:nil];
     STAssertNil(tokenRecorder.error, nil);
-    STAssertEquals((NSUInteger)2, tokenRecorder.tokenCount, nil);
-    STAssertEquals(GRMustacheTokenTypeInvertedSectionOpening, [tokenRecorder tokenTypeAtIndex:1], nil);
-    GRMustacheScopedExpression *parameterExpression = [GRMustacheScopedExpression expressionWithBaseExpression:[GRMustacheIdentifierExpression expressionWithIdentifier:@"foo"] scopeIdentifier:@"bar"];
+    STAssertEquals((NSUInteger)1, tokenRecorder.tokenCount, nil);
+    STAssertEquals(GRMustacheTokenTypeInvertedSectionOpening, [tokenRecorder tokenTypeAtIndex:0], nil);
+    GRMustacheScopedExpression *argumentExpression = [GRMustacheScopedExpression expressionWithBaseExpression:[GRMustacheIdentifierExpression expressionWithIdentifier:@"foo"] scopeIdentifier:@"bar"];
     GRMustacheScopedExpression *filterExpression = [GRMustacheScopedExpression expressionWithBaseExpression:[GRMustacheIdentifierExpression expressionWithIdentifier:@"toto"] scopeIdentifier:@"titi"];
-    GRMustacheFilteredExpression *expression = [GRMustacheFilteredExpression expressionWithFilterExpression:filterExpression parameterExpression:parameterExpression];
-    STAssertEqualObjects(expression, [tokenRecorder tokenValueAtIndex:1], nil);
+    GRMustacheFilteredExpression *expression = [GRMustacheFilteredExpression expressionWithFilterExpression:filterExpression argumentExpression:argumentExpression];
+    STAssertEqualObjects(expression, [tokenRecorder tokenExpressionAtIndex:0], nil);
 }
 
 - (void)testParserTrimsInvertedSectionOpeningTokenWithFilter
 {
-    NSString *templateString = @"{{%FILTERS}}{{^ \n\ttoto.titi \n\t( \n\tfoo.bar \n\t) \n\t}}";
+    NSString *templateString = @"{{^ \n\ttoto.titi \n\t( \n\tfoo.bar \n\t) \n\t}}";
     [parser parseTemplateString:templateString templateID:nil];
     STAssertNil(tokenRecorder.error, nil);
-    STAssertEquals((NSUInteger)2, tokenRecorder.tokenCount, nil);
-    STAssertEquals(GRMustacheTokenTypeInvertedSectionOpening, [tokenRecorder tokenTypeAtIndex:1], nil);
-    GRMustacheScopedExpression *parameterExpression = [GRMustacheScopedExpression expressionWithBaseExpression:[GRMustacheIdentifierExpression expressionWithIdentifier:@"foo"] scopeIdentifier:@"bar"];
+    STAssertEquals((NSUInteger)1, tokenRecorder.tokenCount, nil);
+    STAssertEquals(GRMustacheTokenTypeInvertedSectionOpening, [tokenRecorder tokenTypeAtIndex:0], nil);
+    GRMustacheScopedExpression *argumentExpression = [GRMustacheScopedExpression expressionWithBaseExpression:[GRMustacheIdentifierExpression expressionWithIdentifier:@"foo"] scopeIdentifier:@"bar"];
     GRMustacheScopedExpression *filterExpression = [GRMustacheScopedExpression expressionWithBaseExpression:[GRMustacheIdentifierExpression expressionWithIdentifier:@"toto"] scopeIdentifier:@"titi"];
-    GRMustacheFilteredExpression *expression = [GRMustacheFilteredExpression expressionWithFilterExpression:filterExpression parameterExpression:parameterExpression];
-    STAssertEqualObjects(expression, [tokenRecorder tokenValueAtIndex:1], nil);
+    GRMustacheFilteredExpression *expression = [GRMustacheFilteredExpression expressionWithFilterExpression:filterExpression argumentExpression:argumentExpression];
+    STAssertEqualObjects(expression, [tokenRecorder tokenExpressionAtIndex:0], nil);
 }
 
 - (void)testParserParsesSectionClosingTokenWithSingleKey
@@ -517,9 +572,9 @@
     [parser parseTemplateString:templateString templateID:nil];
     STAssertNil(tokenRecorder.error, nil);
     STAssertEquals((NSUInteger)1, tokenRecorder.tokenCount, nil);
-    STAssertEquals(GRMustacheTokenTypeSectionClosing, [tokenRecorder tokenTypeAtIndex:0], nil);
+    STAssertEquals(GRMustacheTokenTypeClosing, [tokenRecorder tokenTypeAtIndex:0], nil);
     GRMustacheIdentifierExpression *expression = [GRMustacheIdentifierExpression expressionWithIdentifier:@"name"];
-    STAssertEqualObjects(expression, [tokenRecorder tokenValueAtIndex:0], nil);
+    STAssertEqualObjects(expression, [tokenRecorder tokenExpressionAtIndex:0], nil);
 }
 
 - (void)testParserParsesSectionClosingTokenWithCompoundKey
@@ -528,9 +583,9 @@
     [parser parseTemplateString:templateString templateID:nil];
     STAssertNil(tokenRecorder.error, nil);
     STAssertEquals((NSUInteger)1, tokenRecorder.tokenCount, nil);
-    STAssertEquals(GRMustacheTokenTypeSectionClosing, [tokenRecorder tokenTypeAtIndex:0], nil);
+    STAssertEquals(GRMustacheTokenTypeClosing, [tokenRecorder tokenTypeAtIndex:0], nil);
     GRMustacheScopedExpression *expression = [GRMustacheScopedExpression expressionWithBaseExpression:[GRMustacheIdentifierExpression expressionWithIdentifier:@"foo"] scopeIdentifier:@"bar"];
-    STAssertEqualObjects(expression, [tokenRecorder tokenValueAtIndex:0], nil);
+    STAssertEqualObjects(expression, [tokenRecorder tokenExpressionAtIndex:0], nil);
 }
 
 - (void)testParserTrimsSectionClosingTokenWithSingleKey
@@ -539,9 +594,9 @@
     [parser parseTemplateString:templateString templateID:nil];
     STAssertNil(tokenRecorder.error, nil);
     STAssertEquals((NSUInteger)1, tokenRecorder.tokenCount, nil);
-    STAssertEquals(GRMustacheTokenTypeSectionClosing, [tokenRecorder tokenTypeAtIndex:0], nil);
+    STAssertEquals(GRMustacheTokenTypeClosing, [tokenRecorder tokenTypeAtIndex:0], nil);
     GRMustacheIdentifierExpression *expression = [GRMustacheIdentifierExpression expressionWithIdentifier:@"name"];
-    STAssertEqualObjects(expression, [tokenRecorder tokenValueAtIndex:0], nil);
+    STAssertEqualObjects(expression, [tokenRecorder tokenExpressionAtIndex:0], nil);
 }
 
 - (void)testParserTrimsSectionClosingTokenWithCompoundKey
@@ -550,35 +605,35 @@
     [parser parseTemplateString:templateString templateID:nil];
     STAssertNil(tokenRecorder.error, nil);
     STAssertEquals((NSUInteger)1, tokenRecorder.tokenCount, nil);
-    STAssertEquals(GRMustacheTokenTypeSectionClosing, [tokenRecorder tokenTypeAtIndex:0], nil);
+    STAssertEquals(GRMustacheTokenTypeClosing, [tokenRecorder tokenTypeAtIndex:0], nil);
     GRMustacheScopedExpression *expression = [GRMustacheScopedExpression expressionWithBaseExpression:[GRMustacheIdentifierExpression expressionWithIdentifier:@"foo"] scopeIdentifier:@"bar"];
-    STAssertEqualObjects(expression, [tokenRecorder tokenValueAtIndex:0], nil);
+    STAssertEqualObjects(expression, [tokenRecorder tokenExpressionAtIndex:0], nil);
 }
 
 - (void)testParserParsesSectionClosingTokenWithFilter
 {
-    NSString *templateString = @"{{%FILTERS}}{{/toto.titi(foo.bar)}}";
+    NSString *templateString = @"{{/toto.titi(foo.bar)}}";
     [parser parseTemplateString:templateString templateID:nil];
     STAssertNil(tokenRecorder.error, nil);
-    STAssertEquals((NSUInteger)2, tokenRecorder.tokenCount, nil);
-    STAssertEquals(GRMustacheTokenTypeSectionClosing, [tokenRecorder tokenTypeAtIndex:1], nil);
-    GRMustacheScopedExpression *parameterExpression = [GRMustacheScopedExpression expressionWithBaseExpression:[GRMustacheIdentifierExpression expressionWithIdentifier:@"foo"] scopeIdentifier:@"bar"];
+    STAssertEquals((NSUInteger)1, tokenRecorder.tokenCount, nil);
+    STAssertEquals(GRMustacheTokenTypeClosing, [tokenRecorder tokenTypeAtIndex:0], nil);
+    GRMustacheScopedExpression *argumentExpression = [GRMustacheScopedExpression expressionWithBaseExpression:[GRMustacheIdentifierExpression expressionWithIdentifier:@"foo"] scopeIdentifier:@"bar"];
     GRMustacheScopedExpression *filterExpression = [GRMustacheScopedExpression expressionWithBaseExpression:[GRMustacheIdentifierExpression expressionWithIdentifier:@"toto"] scopeIdentifier:@"titi"];
-    GRMustacheFilteredExpression *expression = [GRMustacheFilteredExpression expressionWithFilterExpression:filterExpression parameterExpression:parameterExpression];
-    STAssertEqualObjects(expression, [tokenRecorder tokenValueAtIndex:1], nil);
+    GRMustacheFilteredExpression *expression = [GRMustacheFilteredExpression expressionWithFilterExpression:filterExpression argumentExpression:argumentExpression];
+    STAssertEqualObjects(expression, [tokenRecorder tokenExpressionAtIndex:0], nil);
 }
 
 - (void)testParserTrimsSectionClosingTokenWithFilter
 {
-    NSString *templateString = @"{{%FILTERS}}{{/ \n\ttoto.titi \n\t( \n\tfoo.bar \n\t) \n\t}}";
+    NSString *templateString = @"{{/ \n\ttoto.titi \n\t( \n\tfoo.bar \n\t) \n\t}}";
     [parser parseTemplateString:templateString templateID:nil];
     STAssertNil(tokenRecorder.error, nil);
-    STAssertEquals((NSUInteger)2, tokenRecorder.tokenCount, nil);
-    STAssertEquals(GRMustacheTokenTypeSectionClosing, [tokenRecorder tokenTypeAtIndex:1], nil);
-    GRMustacheScopedExpression *parameterExpression = [GRMustacheScopedExpression expressionWithBaseExpression:[GRMustacheIdentifierExpression expressionWithIdentifier:@"foo"] scopeIdentifier:@"bar"];
+    STAssertEquals((NSUInteger)1, tokenRecorder.tokenCount, nil);
+    STAssertEquals(GRMustacheTokenTypeClosing, [tokenRecorder tokenTypeAtIndex:0], nil);
+    GRMustacheScopedExpression *argumentExpression = [GRMustacheScopedExpression expressionWithBaseExpression:[GRMustacheIdentifierExpression expressionWithIdentifier:@"foo"] scopeIdentifier:@"bar"];
     GRMustacheScopedExpression *filterExpression = [GRMustacheScopedExpression expressionWithBaseExpression:[GRMustacheIdentifierExpression expressionWithIdentifier:@"toto"] scopeIdentifier:@"titi"];
-    GRMustacheFilteredExpression *expression = [GRMustacheFilteredExpression expressionWithFilterExpression:filterExpression parameterExpression:parameterExpression];
-    STAssertEqualObjects(expression, [tokenRecorder tokenValueAtIndex:1], nil);
+    GRMustacheFilteredExpression *expression = [GRMustacheFilteredExpression expressionWithFilterExpression:filterExpression argumentExpression:argumentExpression];
+    STAssertEqualObjects(expression, [tokenRecorder tokenExpressionAtIndex:0], nil);
 }
 
 - (void)testParserParsesPartialTokenWithoutExtension
@@ -588,7 +643,7 @@
     STAssertNil(tokenRecorder.error, nil);
     STAssertEquals((NSUInteger)1, tokenRecorder.tokenCount, nil);
     STAssertEquals(GRMustacheTokenTypePartial, [tokenRecorder tokenTypeAtIndex:0], nil);
-    STAssertEqualObjects(@"name", [tokenRecorder tokenValueAtIndex:0], nil);
+    STAssertEqualObjects(@"name", [tokenRecorder tokenPartialNameAtIndex:0], nil);
 }
 
 - (void)testParserParsesPartialTokenWithExtension
@@ -598,7 +653,7 @@
     STAssertNil(tokenRecorder.error, nil);
     STAssertEquals((NSUInteger)1, tokenRecorder.tokenCount, nil);
     STAssertEquals(GRMustacheTokenTypePartial, [tokenRecorder tokenTypeAtIndex:0], nil);
-    STAssertEqualObjects(@"name.html", [tokenRecorder tokenValueAtIndex:0], nil);
+    STAssertEqualObjects(@"name.html", [tokenRecorder tokenPartialNameAtIndex:0], nil);
 }
 
 - (void)testParserTrimsPartialToken
@@ -608,7 +663,37 @@
     STAssertNil(tokenRecorder.error, nil);
     STAssertEquals((NSUInteger)1, tokenRecorder.tokenCount, nil);
     STAssertEquals(GRMustacheTokenTypePartial, [tokenRecorder tokenTypeAtIndex:0], nil);
-    STAssertEqualObjects(@"name", [tokenRecorder tokenValueAtIndex:0], nil);
+    STAssertEqualObjects(@"name", [tokenRecorder tokenPartialNameAtIndex:0], nil);
+}
+
+- (void)testParserParsesOverridablePartialClosingTokenWithoutExtension
+{
+    NSString *templateString = @"{{/name}}";
+    [parser parseTemplateString:templateString templateID:nil];
+    STAssertNil(tokenRecorder.error, nil);
+    STAssertEquals((NSUInteger)1, tokenRecorder.tokenCount, nil);
+    STAssertEquals(GRMustacheTokenTypeClosing, [tokenRecorder tokenTypeAtIndex:0], nil);
+    STAssertEqualObjects(@"name", [tokenRecorder tokenPartialNameAtIndex:0], nil);
+}
+
+- (void)testParserParsesOverridablePartialClosingTokenWithExtension
+{
+    NSString *templateString = @"{{/name.html}}";
+    [parser parseTemplateString:templateString templateID:nil];
+    STAssertNil(tokenRecorder.error, nil);
+    STAssertEquals((NSUInteger)1, tokenRecorder.tokenCount, nil);
+    STAssertEquals(GRMustacheTokenTypeClosing, [tokenRecorder tokenTypeAtIndex:0], nil);
+    STAssertEqualObjects(@"name.html", [tokenRecorder tokenPartialNameAtIndex:0], nil);
+}
+
+- (void)testParserTrimsOverridablePartialClosingToken
+{
+    NSString *templateString = @"{{/ \n\tname \n\t}}";
+    [parser parseTemplateString:templateString templateID:nil];
+    STAssertNil(tokenRecorder.error, nil);
+    STAssertEquals((NSUInteger)1, tokenRecorder.tokenCount, nil);
+    STAssertEquals(GRMustacheTokenTypeClosing, [tokenRecorder tokenTypeAtIndex:0], nil);
+    STAssertEqualObjects(@"name", [tokenRecorder tokenPartialNameAtIndex:0], nil);
 }
 
 - (void)testParserParsesSetDelimiterToken
@@ -627,7 +712,7 @@
     STAssertNil(tokenRecorder.error, nil);
     STAssertEquals((NSUInteger)1, tokenRecorder.tokenCount, nil);
     STAssertEquals(GRMustacheTokenTypePragma, [tokenRecorder tokenTypeAtIndex:0], nil);
-    STAssertEqualObjects(@"name", [tokenRecorder tokenValueAtIndex:0], nil);
+    STAssertEqualObjects(@"name", [tokenRecorder tokenPragmaAtIndex:0], nil);
 }
 
 - (void)testParserTrimsPragmaToken
@@ -637,7 +722,7 @@
     STAssertNil(tokenRecorder.error, nil);
     STAssertEquals((NSUInteger)1, tokenRecorder.tokenCount, nil);
     STAssertEquals(GRMustacheTokenTypePragma, [tokenRecorder tokenTypeAtIndex:0], nil);
-    STAssertEqualObjects(@"name", [tokenRecorder tokenValueAtIndex:0], nil);
+    STAssertEqualObjects(@"name", [tokenRecorder tokenPragmaAtIndex:0], nil);
 }
 
 - (void)testParserParsesTokenSuite
@@ -648,36 +733,36 @@
     STAssertEquals((NSUInteger)11, tokenRecorder.tokenCount, nil);
     
     STAssertEquals(GRMustacheTokenTypeText, [tokenRecorder tokenTypeAtIndex:0], nil);
-    STAssertEqualObjects(@"<", [tokenRecorder tokenValueAtIndex:0], nil);
+    STAssertEqualObjects(@"<", [tokenRecorder tokenTextAtIndex:0], nil);
     
     STAssertEquals(GRMustacheTokenTypeComment, [tokenRecorder tokenTypeAtIndex:1], nil);
-    STAssertEqualObjects(@"comment", [tokenRecorder tokenValueAtIndex:1], nil);
+    STAssertEqualObjects(@"comment", [tokenRecorder tokenTextAtIndex:1], nil);
     
     STAssertEquals(GRMustacheTokenTypeEscapedVariable, [tokenRecorder tokenTypeAtIndex:2], nil);
-    STAssertEqualObjects([GRMustacheIdentifierExpression expressionWithIdentifier:@"escaped_variable"], [tokenRecorder tokenValueAtIndex:2], nil);
+    STAssertEqualObjects([GRMustacheIdentifierExpression expressionWithIdentifier:@"escaped_variable"], [tokenRecorder tokenExpressionAtIndex:2], nil);
     
     STAssertEquals(GRMustacheTokenTypeUnescapedVariable, [tokenRecorder tokenTypeAtIndex:3], nil);
-    STAssertEqualObjects([GRMustacheIdentifierExpression expressionWithIdentifier:@"unescaped_variable_1"], [tokenRecorder tokenValueAtIndex:3], nil);
+    STAssertEqualObjects([GRMustacheIdentifierExpression expressionWithIdentifier:@"unescaped_variable_1"], [tokenRecorder tokenExpressionAtIndex:3], nil);
     
     STAssertEquals(GRMustacheTokenTypeUnescapedVariable, [tokenRecorder tokenTypeAtIndex:4], nil);
-    STAssertEqualObjects([GRMustacheIdentifierExpression expressionWithIdentifier:@"unescaped_variable_2"], [tokenRecorder tokenValueAtIndex:4], nil);
+    STAssertEqualObjects([GRMustacheIdentifierExpression expressionWithIdentifier:@"unescaped_variable_2"], [tokenRecorder tokenExpressionAtIndex:4], nil);
     
     STAssertEquals(GRMustacheTokenTypeSectionOpening, [tokenRecorder tokenTypeAtIndex:5], nil);
-    STAssertEqualObjects([GRMustacheIdentifierExpression expressionWithIdentifier:@"section_opening"], [tokenRecorder tokenValueAtIndex:5], nil);
+    STAssertEqualObjects([GRMustacheIdentifierExpression expressionWithIdentifier:@"section_opening"], [tokenRecorder tokenExpressionAtIndex:5], nil);
     
     STAssertEquals(GRMustacheTokenTypeInvertedSectionOpening, [tokenRecorder tokenTypeAtIndex:6], nil);
-    STAssertEqualObjects([GRMustacheIdentifierExpression expressionWithIdentifier:@"inverted_section_opening"], [tokenRecorder tokenValueAtIndex:6], nil);
+    STAssertEqualObjects([GRMustacheIdentifierExpression expressionWithIdentifier:@"inverted_section_opening"], [tokenRecorder tokenExpressionAtIndex:6], nil);
     
-    STAssertEquals(GRMustacheTokenTypeSectionClosing, [tokenRecorder tokenTypeAtIndex:7], nil);
-    STAssertEqualObjects([GRMustacheIdentifierExpression expressionWithIdentifier:@"section_closing"], [tokenRecorder tokenValueAtIndex:7], nil);
+    STAssertEquals(GRMustacheTokenTypeClosing, [tokenRecorder tokenTypeAtIndex:7], nil);
+    STAssertEqualObjects([GRMustacheIdentifierExpression expressionWithIdentifier:@"section_closing"], [tokenRecorder tokenExpressionAtIndex:7], nil);
     
     STAssertEquals(GRMustacheTokenTypePragma, [tokenRecorder tokenTypeAtIndex:8], nil);
-    STAssertEqualObjects(@"pragma", [tokenRecorder tokenValueAtIndex:8], nil);
+    STAssertEqualObjects(@"pragma", [tokenRecorder tokenPragmaAtIndex:8], nil);
     
     STAssertEquals(GRMustacheTokenTypeSetDelimiter, [tokenRecorder tokenTypeAtIndex:9], nil);
 
     STAssertEquals(GRMustacheTokenTypeText, [tokenRecorder tokenTypeAtIndex:10], nil);
-    STAssertEqualObjects(@">", [tokenRecorder tokenValueAtIndex:10], nil);
+    STAssertEqualObjects(@">", [tokenRecorder tokenTextAtIndex:10], nil);
 }
 
 - (void)testSetDelimiterTokensChain
@@ -688,31 +773,31 @@
     STAssertEquals((NSUInteger)10, tokenRecorder.tokenCount, nil);
     
     STAssertEquals(GRMustacheTokenTypeText, [tokenRecorder tokenTypeAtIndex:0], nil);
-    STAssertEqualObjects(@"<", [tokenRecorder tokenValueAtIndex:0], nil);
+    STAssertEqualObjects(@"<", [tokenRecorder tokenTextAtIndex:0], nil);
     
     STAssertEquals(GRMustacheTokenTypeSetDelimiter, [tokenRecorder tokenTypeAtIndex:1], nil);
     
     STAssertEquals(GRMustacheTokenTypeEscapedVariable, [tokenRecorder tokenTypeAtIndex:2], nil);
-    STAssertEqualObjects([GRMustacheIdentifierExpression expressionWithIdentifier:@"start"], [tokenRecorder tokenValueAtIndex:2], nil);
+    STAssertEqualObjects([GRMustacheIdentifierExpression expressionWithIdentifier:@"start"], [tokenRecorder tokenExpressionAtIndex:2], nil);
     
     STAssertEquals(GRMustacheTokenTypeSetDelimiter, [tokenRecorder tokenTypeAtIndex:3], nil);
     
     STAssertEquals(GRMustacheTokenTypeSectionOpening, [tokenRecorder tokenTypeAtIndex:4], nil);
-    STAssertEqualObjects([GRMustacheIdentifierExpression expressionWithIdentifier:@"middle"], [tokenRecorder tokenValueAtIndex:4], nil);
+    STAssertEqualObjects([GRMustacheIdentifierExpression expressionWithIdentifier:@"middle"], [tokenRecorder tokenExpressionAtIndex:4], nil);
     
     STAssertEquals(GRMustacheTokenTypeEscapedVariable, [tokenRecorder tokenTypeAtIndex:5], nil);
-    STAssertEqualObjects([GRMustacheIdentifierExpression expressionWithIdentifier:@"item"], [tokenRecorder tokenValueAtIndex:5], nil);
+    STAssertEqualObjects([GRMustacheIdentifierExpression expressionWithIdentifier:@"item"], [tokenRecorder tokenExpressionAtIndex:5], nil);
     
-    STAssertEquals(GRMustacheTokenTypeSectionClosing, [tokenRecorder tokenTypeAtIndex:6], nil);
-    STAssertEqualObjects([GRMustacheIdentifierExpression expressionWithIdentifier:@"middle"], [tokenRecorder tokenValueAtIndex:6], nil);
+    STAssertEquals(GRMustacheTokenTypeClosing, [tokenRecorder tokenTypeAtIndex:6], nil);
+    STAssertEqualObjects([GRMustacheIdentifierExpression expressionWithIdentifier:@"middle"], [tokenRecorder tokenExpressionAtIndex:6], nil);
     
     STAssertEquals(GRMustacheTokenTypeSetDelimiter, [tokenRecorder tokenTypeAtIndex:7], nil);
     
     STAssertEquals(GRMustacheTokenTypeEscapedVariable, [tokenRecorder tokenTypeAtIndex:8], nil);
-    STAssertEqualObjects([GRMustacheIdentifierExpression expressionWithIdentifier:@"final"], [tokenRecorder tokenValueAtIndex:8], nil);
+    STAssertEqualObjects([GRMustacheIdentifierExpression expressionWithIdentifier:@"final"], [tokenRecorder tokenExpressionAtIndex:8], nil);
     
     STAssertEquals(GRMustacheTokenTypeText, [tokenRecorder tokenTypeAtIndex:9], nil);
-    STAssertEqualObjects(@">", [tokenRecorder tokenValueAtIndex:9], nil);
+    STAssertEqualObjects(@">", [tokenRecorder tokenTextAtIndex:9], nil);
 }
 
 - (void)testLotsOfStache
@@ -723,4 +808,21 @@
     STAssertEqualObjects(tokenRecorder.error.domain, GRMustacheErrorDomain, nil);
     STAssertEquals(tokenRecorder.error.code, (NSInteger)GRMustacheErrorCodeParseError, nil);
 }
+
+
+- (void)testIdentifiersCanNotStartWithMustacheTagCharacters
+{
+    NSArray *mustacheTagCharacters = @[@"{", @"}", @"<", @">", @"&", @"#", @"^", @"$", @"/"];
+    
+    // Identifiers can't start with a forbidden character
+    
+    for (NSString *mustacheTagCharacter in mustacheTagCharacters) {
+        STAssertNil(([GRMustacheParser parseExpression:[NSString stringWithFormat:@"%@", mustacheTagCharacter] invalid:NULL]), nil);
+        STAssertNil(([GRMustacheParser parseExpression:[NSString stringWithFormat:@"%@a", mustacheTagCharacter] invalid:NULL]), nil);
+        STAssertNil(([GRMustacheParser parseExpression:[NSString stringWithFormat:@".%@a", mustacheTagCharacter] invalid:NULL]), nil);
+        STAssertNil(([GRMustacheParser parseExpression:[NSString stringWithFormat:@"a.%@b", mustacheTagCharacter] invalid:NULL]), nil);
+        STAssertNil(([GRMustacheParser parseExpression:[NSString stringWithFormat:@"a(%@b)", mustacheTagCharacter] invalid:NULL]), nil);
+    }
+}
+
 @end

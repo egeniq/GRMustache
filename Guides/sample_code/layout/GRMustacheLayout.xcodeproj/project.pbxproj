@@ -8,16 +8,14 @@
 
 /* Begin PBXBuildFile section */
 		5667CC4915A1B95F0096B183 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5667CC4815A1B95F0096B183 /* Cocoa.framework */; };
-		5667CC5315A1B95F0096B183 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 5667CC5115A1B95F0096B183 /* InfoPlist.strings */; };
 		5667CC5515A1B95F0096B183 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 5667CC5415A1B95F0096B183 /* main.m */; };
-		5667CC5915A1B95F0096B183 /* Credits.rtf in Resources */ = {isa = PBXBuildFile; fileRef = 5667CC5715A1B95F0096B183 /* Credits.rtf */; };
 		5667CC5C15A1B95F0096B183 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 5667CC5B15A1B95F0096B183 /* AppDelegate.m */; };
 		5667CC5F15A1B95F0096B183 /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 5667CC5D15A1B95F0096B183 /* MainMenu.xib */; };
 		5667CC6A15A1B99C0096B183 /* layout.mustache in Resources */ = {isa = PBXBuildFile; fileRef = 5667CC6915A1B99C0096B183 /* layout.mustache */; };
 		5667CC6C15A1B9B40096B183 /* header.mustache in Resources */ = {isa = PBXBuildFile; fileRef = 5667CC6B15A1B9B40096B183 /* header.mustache */; };
 		5667CC7815A1BDB60096B183 /* article.mustache in Resources */ = {isa = PBXBuildFile; fileRef = 5667CC7715A1BDB60096B183 /* article.mustache */; };
 		5667CC7C15A1BF710096B183 /* Article.m in Sources */ = {isa = PBXBuildFile; fileRef = 5667CC7B15A1BF710096B183 /* Article.m */; };
-		56F9D2E115A30F67003026DD /* libGRMustache4-MacOS.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 56F9D2E015A30F67003026DD /* libGRMustache4-MacOS.a */; };
+		56F9D2E115A30F67003026DD /* libGRMustache6-MacOS.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 56F9D2E015A30F67003026DD /* libGRMustache6-MacOS.a */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -27,10 +25,8 @@
 		5667CC4C15A1B95F0096B183 /* CoreData.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreData.framework; path = System/Library/Frameworks/CoreData.framework; sourceTree = SDKROOT; };
 		5667CC4D15A1B95F0096B183 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		5667CC5015A1B95F0096B183 /* GRMustacheLayout-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GRMustacheLayout-Info.plist"; sourceTree = "<group>"; };
-		5667CC5215A1B95F0096B183 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		5667CC5415A1B95F0096B183 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		5667CC5615A1B95F0096B183 /* GRMustacheLayout-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "GRMustacheLayout-Prefix.pch"; sourceTree = "<group>"; };
-		5667CC5815A1B95F0096B183 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.rtf; name = en; path = en.lproj/Credits.rtf; sourceTree = "<group>"; };
 		5667CC5A15A1B95F0096B183 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		5667CC5B15A1B95F0096B183 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
 		5667CC5E15A1B95F0096B183 /* en */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = en; path = en.lproj/MainMenu.xib; sourceTree = "<group>"; };
@@ -40,7 +36,7 @@
 		5667CC7A15A1BF710096B183 /* Article.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Article.h; sourceTree = "<group>"; };
 		5667CC7B15A1BF710096B183 /* Article.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Article.m; sourceTree = "<group>"; };
 		56F9D2DF15A30F67003026DD /* GRMustache.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GRMustache.h; path = include/GRMustache.h; sourceTree = "<group>"; };
-		56F9D2E015A30F67003026DD /* libGRMustache4-MacOS.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libGRMustache4-MacOS.a"; path = "lib/libGRMustache4-MacOS.a"; sourceTree = "<group>"; };
+		56F9D2E015A30F67003026DD /* libGRMustache6-MacOS.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libGRMustache6-MacOS.a"; path = "lib/libGRMustache6-MacOS.a"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -49,7 +45,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				5667CC4915A1B95F0096B183 /* Cocoa.framework in Frameworks */,
-				56F9D2E115A30F67003026DD /* libGRMustache4-MacOS.a in Frameworks */,
+				56F9D2E115A30F67003026DD /* libGRMustache6-MacOS.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -109,11 +105,9 @@
 			isa = PBXGroup;
 			children = (
 				5667CC5015A1B95F0096B183 /* GRMustacheLayout-Info.plist */,
-				5667CC5115A1B95F0096B183 /* InfoPlist.strings */,
 				5667CC5415A1B95F0096B183 /* main.m */,
 				5667CC5D15A1B95F0096B183 /* MainMenu.xib */,
 				5667CC5615A1B95F0096B183 /* GRMustacheLayout-Prefix.pch */,
-				5667CC5715A1B95F0096B183 /* Credits.rtf */,
 			);
 			name = "Supporting Files";
 			sourceTree = "<group>";
@@ -141,7 +135,7 @@
 			isa = PBXGroup;
 			children = (
 				56F9D2DF15A30F67003026DD /* GRMustache.h */,
-				56F9D2E015A30F67003026DD /* libGRMustache4-MacOS.a */,
+				56F9D2E015A30F67003026DD /* libGRMustache6-MacOS.a */,
 			);
 			name = GRMustache;
 			path = ../../../..;
@@ -173,7 +167,7 @@
 		5667CC3B15A1B95E0096B183 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0430;
+				LastUpgradeCheck = 0450;
 			};
 			buildConfigurationList = 5667CC3E15A1B95E0096B183 /* Build configuration list for PBXProject "GRMustacheLayout" */;
 			compatibilityVersion = "Xcode 3.2";
@@ -197,8 +191,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				5667CC5315A1B95F0096B183 /* InfoPlist.strings in Resources */,
-				5667CC5915A1B95F0096B183 /* Credits.rtf in Resources */,
 				5667CC5F15A1B95F0096B183 /* MainMenu.xib in Resources */,
 				5667CC6A15A1B99C0096B183 /* layout.mustache in Resources */,
 				5667CC6C15A1B9B40096B183 /* header.mustache in Resources */,
@@ -222,22 +214,6 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXVariantGroup section */
-		5667CC5115A1B95F0096B183 /* InfoPlist.strings */ = {
-			isa = PBXVariantGroup;
-			children = (
-				5667CC5215A1B95F0096B183 /* en */,
-			);
-			name = InfoPlist.strings;
-			sourceTree = "<group>";
-		};
-		5667CC5715A1B95F0096B183 /* Credits.rtf */ = {
-			isa = PBXVariantGroup;
-			children = (
-				5667CC5815A1B95F0096B183 /* en */,
-			);
-			name = Credits.rtf;
-			sourceTree = "<group>";
-		};
 		5667CC5D15A1B95F0096B183 /* MainMenu.xib */ = {
 			isa = PBXVariantGroup;
 			children = (
@@ -299,6 +275,7 @@
 		5667CC6315A1B95F0096B183 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "GRMustacheLayout/GRMustacheLayout-Prefix.pch";
 				INFOPLIST_FILE = "GRMustacheLayout/GRMustacheLayout-Info.plist";
@@ -314,6 +291,7 @@
 		5667CC6415A1B95F0096B183 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "GRMustacheLayout/GRMustacheLayout-Prefix.pch";
 				INFOPLIST_FILE = "GRMustacheLayout/GRMustacheLayout-Info.plist";

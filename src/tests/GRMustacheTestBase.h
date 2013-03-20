@@ -1,6 +1,6 @@
 // The MIT License
 // 
-// Copyright (c) 2012 Gwendal Roué
+// Copyright (c) 2013 Gwendal Roué
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -21,7 +21,18 @@
 // THE SOFTWARE.
 
 #import <SenTestingKit/SenTestingKit.h>
+#import "GRMustacheTagDelegate.h"
 
 @interface GRMustacheTestBase: SenTestCase
 @property (nonatomic, readonly) NSBundle *testBundle;
+- (id)JSONObjectWithData:(NSData *)data error:(NSError **)error;
 @end
+
+@interface GRMustacheTestingDelegate : NSObject<GRMustacheTagDelegate> {
+    id(^_mustacheTagWillRenderBlock)(GRMustacheTag *tag, id object);
+    void(^_mustacheTagDidRenderBlock)(GRMustacheTag *tag, id object, NSString *rendering);
+}
+@property (nonatomic, copy) id(^mustacheTagWillRenderBlock)(GRMustacheTag *tag, id object);
+@property (nonatomic, copy) void(^mustacheTagDidRenderBlock)(GRMustacheTag *tag, id object, NSString *rendering);
+@end
+
